@@ -80,7 +80,7 @@ export default function Navbar() {
             <a href="/about" className="text-gray-700 dark:text-gray-300 hover:text-teal-600 transition-colors">
               About
             </a>
-            <a href="/blog" className="text-gray-700 dark:text-gray-300 hover:text-teal-600 transition-colors">
+            <a href="/insights" className="text-gray-700 dark:text-gray-300 hover:text-teal-600 transition-colors">
               Insights
             </a>
             <a href="/contact" className="text-gray-700 dark:text-gray-300 hover:text-teal-600 transition-colors">
