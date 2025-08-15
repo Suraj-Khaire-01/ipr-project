@@ -1,12 +1,8 @@
-import { Scale, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from "lucide-react"
+import React from "react";
+import { Link } from "react-router-dom";
+import { Scale, Mail, Phone, MapPin, Facebook, Twitter, Linkedin, Instagram } from "lucide-react";
 
 export default function Footer() {
-  const handleNavigation = (href) => {
-    // In a real app, you'd use React Router
-    if (href === '#') return // Handle social media links
-    window.location.href = href
-  }
-
   return (
     <footer className="bg-gray-900 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
@@ -15,40 +11,24 @@ export default function Footer() {
           <div className="space-y-4">
             <div className="flex items-center space-x-2">
               <Scale className="h-8 w-8 text-teal-400" />
-              <span className="font-serif text-xl font-bold">IPSecure Legal</span>
+              <span className="font-playfair text-xl font-bold">IPSecure Legal</span>
             </div>
             <p className="text-gray-400 text-sm">
               Protecting your intellectual property rights with expertise, dedication, and innovative legal solutions.
             </p>
             <div className="flex space-x-4">
-              <button 
-                onClick={() => handleNavigation("#")} 
-                className="text-gray-400 hover:text-teal-400 transition-colors focus:outline-none"
-                aria-label="Facebook"
-              >
+              <Link to="#" className="text-gray-400 hover:text-teal-400 transition-colors">
                 <Facebook className="h-5 w-5" />
-              </button>
-              <button 
-                onClick={() => handleNavigation("#")} 
-                className="text-gray-400 hover:text-teal-400 transition-colors focus:outline-none"
-                aria-label="Twitter"
-              >
+              </Link>
+              <Link to="#" className="text-gray-400 hover:text-teal-400 transition-colors">
                 <Twitter className="h-5 w-5" />
-              </button>
-              <button 
-                onClick={() => handleNavigation("#")} 
-                className="text-gray-400 hover:text-teal-400 transition-colors focus:outline-none"
-                aria-label="LinkedIn"
-              >
+              </Link>
+              <Link to="#" className="text-gray-400 hover:text-teal-400 transition-colors">
                 <Linkedin className="h-5 w-5" />
-              </button>
-              <button 
-                onClick={() => handleNavigation("#")} 
-                className="text-gray-400 hover:text-teal-400 transition-colors focus:outline-none"
-                aria-label="Instagram"
-              >
+              </Link>
+              <Link to="#" className="text-gray-400 hover:text-teal-400 transition-colors">
                 <Instagram className="h-5 w-5" />
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -56,70 +36,14 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold text-lg mb-4">Services</h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/services/patents")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Patents
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/services/trademarks")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Trademarks
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/services/copyrights")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Copyrights
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleNavigation("/services/industrial-design")}
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Industrial Design
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/services/litigation")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  IP Litigation
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/processes/patent-filing")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Patent Filing Process
-                </button>
-              </li>
-              <li>
-                <button
-                  onClick={() => handleNavigation("/processes/copyright-filing")}
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Copyright Filing Process
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/processes/requirements")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Filing Requirements
-                </button>
-              </li>
+              <li><Link to="/services/patents" className="text-gray-400 hover:text-teal-400">Patents</Link></li>
+              <li><Link to="/services/trademarks" className="text-gray-400 hover:text-teal-400">Trademarks</Link></li>
+              <li><Link to="/services/copyrights" className="text-gray-400 hover:text-teal-400">Copyrights</Link></li>
+              <li><Link to="/services/industrial-design" className="text-gray-400 hover:text-teal-400">Industrial Design</Link></li>
+              <li><Link to="/services/litigation" className="text-gray-400 hover:text-teal-400">IP Litigation</Link></li>
+              <li><Link to="/processes/patent-filing" className="text-gray-400 hover:text-teal-400">Patent Filing Process</Link></li>
+              <li><Link to="/processes/copyright-filing" className="text-gray-400 hover:text-teal-400">Copyright Filing Process</Link></li>
+              <li><Link to="/processes/requirements" className="text-gray-400 hover:text-teal-400">Filing Requirements</Link></li>
             </ul>
           </div>
 
@@ -127,46 +51,11 @@ export default function Footer() {
           <div>
             <h3 className="font-semibold text-lg mb-4">Quick Links</h3>
             <ul className="space-y-2 text-sm">
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/about")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  About Us
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/blog")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Insights
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/contact")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Contact
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/login")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Client Login
-                </button>
-              </li>
-              <li>
-                <button 
-                  onClick={() => handleNavigation("/privacy")} 
-                  className="text-gray-400 hover:text-teal-400 transition-colors text-left focus:outline-none"
-                >
-                  Privacy Policy
-                </button>
-              </li>
+              <li><Link to="/about" className="text-gray-400 hover:text-teal-400">About Us</Link></li>
+              <li><Link to="/blog" className="text-gray-400 hover:text-teal-400">Insights</Link></li>
+              <li><Link to="/contact" className="text-gray-400 hover:text-teal-400">Contact</Link></li>
+              <li><Link to="/login" className="text-gray-400 hover:text-teal-400">Client Login</Link></li>
+              <li><Link to="/privacy" className="text-gray-400 hover:text-teal-400">Privacy Policy</Link></li>
             </ul>
           </div>
 
@@ -178,36 +67,26 @@ export default function Footer() {
                 <MapPin className="h-4 w-4 text-teal-400 mt-0.5 flex-shrink-0" />
                 <span className="text-gray-400">
                   123 Legal Plaza, Suite 500
-                  <br />
-                  New York, NY 10001
+                  <br /> New York, NY 10001
                 </span>
               </div>
               <div className="flex items-center space-x-3">
                 <Phone className="h-4 w-4 text-teal-400 flex-shrink-0" />
-                <a 
-                  href="tel:+15551234567" 
-                  className="text-gray-400 hover:text-teal-400 transition-colors focus:outline-none"
-                >
-                  +1 (555) 123-4567
-                </a>
+                <span className="text-gray-400">+1 (555) 123-4567</span>
               </div>
               <div className="flex items-center space-x-3">
                 <Mail className="h-4 w-4 text-teal-400 flex-shrink-0" />
-                <a 
-                  href="mailto:info@ipsecurelegal.com" 
-                  className="text-gray-400 hover:text-teal-400 transition-colors focus:outline-none"
-                >
-                  info@ipsecurelegal.com
-                </a>
+                <span className="text-gray-400">info@ipsecurelegal.com</span>
               </div>
             </div>
           </div>
         </div>
 
+        {/* Footer Bottom */}
         <div className="border-t border-gray-800 mt-8 pt-8 text-center text-sm text-gray-400">
           <p>&copy; {new Date().getFullYear()} IPSecure Legal. All rights reserved.</p>
         </div>
       </div>
     </footer>
-  )
+  );
 }

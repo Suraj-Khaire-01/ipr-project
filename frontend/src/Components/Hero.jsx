@@ -1,111 +1,117 @@
-import React from "react";
-import { Shield, Scale, Lock, Mail, Phone, MapPin } from "lucide-react";
+import { useState, useEffect } from "react";
+import { ArrowRight, Shield, Scale, Award } from "lucide-react";
 
 export default function Hero() {
+  const [currentText, setCurrentText] = useState(0);
+  const texts = [
+    "Protecting Your Innovations",
+    "Securing Your Brand Identity",
+    "Defending Your Creative Works"
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentText((prev) => (prev + 1) % texts.length);
+    }, 3000);
+    return () => clearInterval(interval);
+  }, []);
+
   return (
-    <div className="bg-gray-900 text-white font-sans">
-      {/* Navbar */}
-      <nav className="flex items-center justify-between px-6 py-4 bg-gray-800 shadow-lg">
-        <div className="flex items-center space-x-2">
-          <Shield className="text-indigo-400" size={32} />
-          <span className="text-2xl font-bold">IPSecure Legal</span>
-        </div>
-        <div className="space-x-6">
-          <a href="#services" className="hover:text-indigo-400">Services</a>
-          <a href="#about" className="hover:text-indigo-400">About</a>
-          <a href="#contact" className="hover:text-indigo-400">Contact</a>
-        </div>
-      </nav>
+    <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
+      {/* Background gradient overlay */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80 z-0"></div>
 
-      {/* Hero */}
-      <section className="text-center py-20 bg-gray-900">
-        <h1 className="text-5xl font-extrabold mb-6 text-indigo-400">
-          Protecting Your Ideas, Securing Your Future
+      {/* Background video */}
+      <video
+        autoPlay
+        muted
+        loop
+        playsInline
+        className="absolute inset-0 w-full h-full object-cover opacity-50 "
+      >
+        <source src="/home_bg.mp4" type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+       
+
+      {/* Content */}
+      <div className="relative z-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+        <h1 className="font-sans text-4xl md:text-6xl lg:text-7xl font-bold text-white mb-6">
+          <span className="block">IPSecure Legal</span>
+          <span className="block text-2xl md:text-4xl lg:text-5xl mt-4 text-teal-300 transition-all duration-500">
+            {texts[currentText]}
+          </span>
         </h1>
-        <p className="text-lg text-gray-300 max-w-2xl mx-auto mb-8">
-          Expert intellectual property protection with tailored legal solutions for individuals and businesses.
+
+        <p className="text-xl md:text-2xl text-gray-200 mb-8 max-w-3xl mx-auto">
+          Leading intellectual property law firm specializing in patents,
+          trademarks, copyrights, and IP litigation. Your innovation deserves
+          the best protection.
         </p>
-        <a href="#contact" className="px-6 py-3 bg-indigo-500 hover:bg-indigo-600 rounded-full text-lg font-semibold transition">
-          Get a Consultation
-        </a>
-      </section>
 
-      {/* Services */}
-      <section id="services" className="py-16 bg-gray-800">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-indigo-400">Our Services</h2>
-          <p className="text-gray-400 mt-2">Comprehensive IP solutions tailored to your needs.</p>
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          <a
+            href="/journey/consultation"
+            className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 text-lg rounded-lg flex items-center"
+          >
+            Get Consultation
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </a>
+          <a
+            href="/journey/patent-filing"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg rounded-lg flex items-center"
+          >
+            File Patent
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </a>
+          <a
+            href="/journey/copyright-filing"
+            className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 text-lg rounded-lg flex items-center"
+          >
+            File Copyright
+            <ArrowRight className="ml-2 h-5 w-5" />
+          </a>
+          <a
+            href="/processes/requirements"
+            className="border border-white text-white hover:bg-white hover:text-gray-900 px-8 py-4 text-lg rounded-lg"
+          >
+            Learn More (FAQs & Requirements)
+          </a>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 px-6">
-          <div className="bg-gray-900 p-6 rounded-xl shadow-lg text-center hover:scale-105 transition">
-            <Lock size={48} className="text-indigo-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Patent Protection</h3>
-            <p className="text-gray-400">Safeguard your inventions with robust legal strategies.</p>
-          </div>
-          <div className="bg-gray-900 p-6 rounded-xl shadow-lg text-center hover:scale-105 transition">
-            <Scale size={48} className="text-indigo-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Trademark Registration</h3>
-            <p className="text-gray-400">Protect your brand identity with trademark services.</p>
-          </div>
-          <div className="bg-gray-900 p-6 rounded-xl shadow-lg text-center hover:scale-105 transition">
-            <Shield size={48} className="text-indigo-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold mb-2">Copyright Services</h3>
-            <p className="text-gray-400">Secure your creative works and ensure legal protection.</p>
-          </div>
-        </div>
-      </section>
 
-      {/* About */}
-      <section id="about" className="py-16 bg-gray-900 px-6 text-center">
-        <h2 className="text-3xl font-bold text-indigo-400 mb-4">About Us</h2>
-        <p className="text-gray-400 max-w-2xl mx-auto">
-          With decades of combined experience, IPSecure Legal is committed to delivering exceptional legal services
-          that protect and enhance your intellectual property rights.
-        </p>
-      </section>
-
-      {/* Testimonials */}
-      <section className="py-16 bg-gray-800 px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-indigo-400">What Our Clients Say</h2>
-        </div>
-        <div className="max-w-3xl mx-auto bg-gray-900 p-6 rounded-xl shadow-lg">
-          <p className="text-gray-300 italic">
-            "IPSecure Legal made the complex process of trademark registration simple and stress-free.
-            Highly recommended!"
-          </p>
-          <span className="block mt-4 text-indigo-400 font-semibold">— Sarah L., Startup Founder</span>
-        </div>
-      </section>
-
-      {/* Contact */}
-      <section id="contact" className="py-16 bg-gray-900 px-6">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-indigo-400">Get in Touch</h2>
-          <p className="text-gray-400">Have questions? We’re here to help.</p>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-          <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
-            <h3 className="text-xl font-semibold mb-4">Contact Information</h3>
-            <p className="flex items-center mb-2"><Mail className="text-indigo-400 mr-2" /> info@ipsecure.com</p>
-            <p className="flex items-center mb-2"><Phone className="text-indigo-400 mr-2" /> (123) 456-7890</p>
-            <p className="flex items-center"><MapPin className="text-indigo-400 mr-2" /> 123 Legal St, Law City</p>
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
+          <div className="text-center">
+            <div className="flex justify-center mb-2">
+              <Shield className="h-8 w-8 text-teal-300" />
+            </div>
+            <div className="text-3xl font-bold text-white">500+</div>
+            <div className="text-gray-300">Patents Secured</div>
           </div>
-          <div className="bg-gray-800 p-6 rounded-xl shadow-lg">
-            <input type="text" placeholder="Name" className="w-full mb-4 p-3 rounded bg-gray-900 border border-gray-700 focus:border-indigo-500" />
-            <input type="email" placeholder="Email" className="w-full mb-4 p-3 rounded bg-gray-900 border border-gray-700 focus:border-indigo-500" />
-            <textarea placeholder="Message" rows="4" className="w-full mb-4 p-3 rounded bg-gray-900 border border-gray-700 focus:border-indigo-500"></textarea>
-            <button className="w-full py-3 bg-indigo-500 hover:bg-indigo-600 rounded font-semibold">
-              Send Message
-            </button>
+          <div className="text-center">
+            <div className="flex justify-center mb-2">
+              <Scale className="h-8 w-8 text-teal-300" />
+            </div>
+            <div className="text-3xl font-bold text-white">15+</div>
+            <div className="text-gray-300">Years Experience</div>
+          </div>
+          <div className="text-center">
+            <div className="flex justify-center mb-2">
+              <Award className="h-8 w-8 text-teal-300" />
+            </div>
+            <div className="text-3xl font-bold text-white">98%</div>
+            <div className="text-gray-300">Success Rate</div>
           </div>
         </div>
-      </section>
+      </div>
 
-      {/* Footer */}
-      <footer className="bg-gray-800 py-6 text-center text-gray-500 text-sm">
-        &copy; {new Date().getFullYear()} IPSecure Legal. All rights reserved.
-      </footer>
-    </div>
+      {/* Scroll indicator */}
+      <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce">
+        <div className="w-6 h-10 border-2 border-white rounded-full flex justify-center">
+          <div className="w-1 h-3 bg-white rounded-full mt-2 animate-pulse"></div>
+        </div>
+      </div>
+    </section>
   );
 }
