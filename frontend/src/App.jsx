@@ -14,6 +14,7 @@ import Insights from './Components/Insights'
 import PatentServicesPage from './Services/PatentServicesPage'
 import Consulation from './Services/Consultation'
 import FilingRequirementsPage from './Services/FilingRequirementsPage'
+import PatentFilingProcess from './Services/PatentFilingProcess'
 
 function App() {
   return (
@@ -48,6 +49,7 @@ function App() {
           <Route path="/patentservice" element={<PatentServicesPage />}/>
           <Route path="/consulation" element={<Consulation />}/>
           <Route path="/requirements" element={<FilingRequirementsPage />}/>
+          <Route path="/patent" element={<PatentFilingProcess />}/>
           {/* <Route path="/admin-login" element={<AdminLogin />} /> */}
         </Routes>
       </main>

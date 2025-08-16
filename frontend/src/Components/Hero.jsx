@@ -59,7 +59,7 @@ export default function Hero() {
             <ArrowRight className="ml-2 h-5 w-5" />
           </a>
           <a
-            href="/journey/patent-filing"
+            href="/patent"
             className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 text-lg rounded-lg flex items-center"
           >
             File Patent
