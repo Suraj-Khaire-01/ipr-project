@@ -52,7 +52,7 @@ export default function Hero() {
         {/* CTA Buttons */}
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
           <a
-            href="/journey/consultation"
+            href="/consulation"
             className="bg-teal-600 hover:bg-teal-700 text-white px-8 py-4 text-lg rounded-lg flex items-center"
           >
             Get Consultation
@@ -73,7 +73,7 @@ export default function Hero() {
             <ArrowRight className="ml-2 h-5 w-5" />
           </a>
           <a
-            href="/processes/requirements"
+            href="/requirements"
             className="border border-white text-white hover:bg-white hover:text-gray-900 px-8 py-4 text-lg rounded-lg"
           >
             Learn More (FAQs & Requirements)

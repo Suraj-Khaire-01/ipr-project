@@ -3,7 +3,7 @@ import { Sun, Moon, Menu, X, ChevronDown, Scale, Copyright, FileText, Palette, G
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'
 
 const services = [
-  { name: "Patents", href: "/services/patents", icon: FileText },
+  { name: "Patents", href: "/patentservice", icon: FileText },
   { name: "Trademarks", href: "/services/trademarks", icon: Scale },
   { name: "Copyrights", href: "/services/copyrights", icon: Copyright },
   { name: "Industrial Design", href: "/services/industrial-design", icon: Palette },
@@ -11,7 +11,7 @@ const services = [
   { name: "separator", href: "", icon: null },
   { name: "Patent Filing Process", href: "/processes/patent-filing", icon: FileText },
   { name: "Copyright Filing Process", href: "/processes/copyright-filing", icon: Copyright },
-  { name: "Filing Requirements", href: "/processes/requirements", icon: FileCheck },
+  { name: "Filing Requirements", href: "/requirements", icon: FileCheck },
 ]
 
 export default function Navbar() {

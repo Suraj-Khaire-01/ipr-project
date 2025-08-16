@@ -11,6 +11,9 @@ import Contact from './Pages/Contact'
 import ProtectedRoute from './Components/ProtectRoute'
 import About from './Components/About'
 import Insights from './Components/Insights'
+import PatentServicesPage from './Services/PatentServicesPage'
+import Consulation from './Services/Consultation'
+import FilingRequirementsPage from './Services/FilingRequirementsPage'
 
 function App() {
   return (
@@ -42,6 +45,9 @@ function App() {
           {/* Uncomment if needed */}
           <Route path="/about" element={<About />} />
           <Route path="/insights" element={<Insights />} />
+          <Route path="/patentservice" element={<PatentServicesPage />}/>
+          <Route path="/consulation" element={<Consulation />}/>
+          <Route path="/requirements" element={<FilingRequirementsPage />}/>
           {/* <Route path="/admin-login" element={<AdminLogin />} /> */}
         </Routes>
       </main>
