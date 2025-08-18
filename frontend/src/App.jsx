@@ -2,10 +2,7 @@ import { Routes, Route } from 'react-router-dom'
 import Navbar from './Components/Navbar'
 import Footer from './Components/Footer'
 import Home from './Pages/Home'
-// import SignIn from './pages/SignIn'
-// import SignUp from './pages/SignUp'
 import Dashboard from './Pages/Dashboard'
-// import AdminLogin from './pages/AdminLogin'
 import AdminDashboard from './Pages/AdminDashboard'
 import Contact from './Pages/Contact'
 import ProtectedRoute from './Components/ProtectRoute'
@@ -15,6 +12,11 @@ import PatentServicesPage from './Services/PatentServicesPage'
 import Consulation from './Services/Consultation'
 import FilingRequirementsPage from './Services/FilingRequirementsPage'
 import PatentFilingProcess from './Services/PatentFilingProcess'
+import CopyrightFillingProcess from './Services/CopyrightFillingProcess'
+import TrademarkServices from './Services/TrademarkServices'
+import CopyrightServices from './Services/CopyrightServices'
+import IndustrialDesignServices from './Services/IndustrialDesignServices'
+import IPLitigationPage from './Services/IPLitigationPage'
 
 function App() {
   return (
@@ -50,6 +52,11 @@ function App() {
           <Route path="/consulation" element={<Consulation />}/>
           <Route path="/requirements" element={<FilingRequirementsPage />}/>
           <Route path="/patent" element={<PatentFilingProcess />}/>
+          <Route path="/copyright" element={<CopyrightFillingProcess />}/>
+          <Route path="/trademarkservices" element={<TrademarkServices />}/>
+          <Route path="/copyrightservices" element={<CopyrightServices />}/>
+          <Route path="/industrialdesignservices" element={<IndustrialDesignServices />}/>
+          <Route path="/iplitigationpage" element={<IPLitigationPage />}/>
           {/* <Route path="/admin-login" element={<AdminLogin />} /> */}
         </Routes>
       </main>

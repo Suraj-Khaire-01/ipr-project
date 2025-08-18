@@ -66,7 +66,7 @@ export default function Hero() {
             <ArrowRight className="ml-2 h-5 w-5" />
           </a>
           <a
-            href="/journey/copyright-filing"
+            href="/copyright"
             className="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 text-lg rounded-lg flex items-center"
           >
             File Copyright

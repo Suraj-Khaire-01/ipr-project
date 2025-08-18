@@ -37,10 +37,10 @@ export default function Footer() {
             <h3 className="font-semibold text-lg mb-4">Services</h3>
             <ul className="space-y-2 text-sm">
               <li><Link to="/patentservice" className="text-gray-400 hover:text-teal-400">Patents</Link></li>
-              <li><Link to="/services/trademarks" className="text-gray-400 hover:text-teal-400">Trademarks</Link></li>
-              <li><Link to="/services/copyrights" className="text-gray-400 hover:text-teal-400">Copyrights</Link></li>
-              <li><Link to="/services/industrial-design" className="text-gray-400 hover:text-teal-400">Industrial Design</Link></li>
-              <li><Link to="/services/litigation" className="text-gray-400 hover:text-teal-400">IP Litigation</Link></li>
+              <li><Link to="/trademarkservices" className="text-gray-400 hover:text-teal-400">Trademarks</Link></li>
+              <li><Link to="/copyrightservices" className="text-gray-400 hover:text-teal-400">Copyrights</Link></li>
+              <li><Link to="/industrialdesignservices" className="text-gray-400 hover:text-teal-400">Industrial Design</Link></li>
+              <li><Link to="/iplitigationpage" className="text-gray-400 hover:text-teal-400">IP Litigation</Link></li>
               <li><Link to="/processes/patent-filing" className="text-gray-400 hover:text-teal-400">Patent Filing Process</Link></li>
               <li><Link to="/processes/copyright-filing" className="text-gray-400 hover:text-teal-400">Copyright Filing Process</Link></li>
               <li><Link to="/requirements" className="text-gray-400 hover:text-teal-400">Filing Requirements</Link></li>

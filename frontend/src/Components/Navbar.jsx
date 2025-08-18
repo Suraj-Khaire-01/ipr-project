@@ -4,10 +4,10 @@ import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-reac
 
 const services = [
   { name: "Patents", href: "/patentservice", icon: FileText },
-  { name: "Trademarks", href: "/services/trademarks", icon: Scale },
-  { name: "Copyrights", href: "/services/copyrights", icon: Copyright },
-  { name: "Industrial Design", href: "/services/industrial-design", icon: Palette },
-  { name: "IP Litigation", href: "/services/litigation", icon: Gavel },
+  { name: "Trademarks", href: "/trademarkservices", icon: Scale },
+  { name: "Copyrights", href: "/copyrightservices", icon: Copyright },
+  { name: "Industrial Design", href: "/industrialdesignservices", icon: Palette },
+  { name: "IP Litigation", href: "/iplitigationpage", icon: Gavel },
   { name: "separator", href: "", icon: null },
   { name: "Patent Filing Process", href: "/processes/patent-filing", icon: FileText },
   { name: "Copyright Filing Process", href: "/processes/copyright-filing", icon: Copyright },
