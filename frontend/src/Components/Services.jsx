@@ -5,7 +5,7 @@ const services = [
     icon: FileText,
     title: "Patents",
     description: "Protect your inventions and innovations with comprehensive patent services.",
-    href: "/services/patents",
+    href: "/patentservice",
     color: "bg-blue-500",
   },
   {

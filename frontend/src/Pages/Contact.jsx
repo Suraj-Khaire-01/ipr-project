@@ -1,7 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import { Mail, Phone, MapPin, Clock, Globe, Send } from 'lucide-react'
-import tt from '@tomtom-international/web-sdk-maps'
-import '@tomtom-international/web-sdk-maps/dist/maps.css'
+import { Mail, Phone, MapPin, Clock, Globe, Send, CheckCircle, AlertCircle, Loader } from 'lucide-react'
 
 function Contact() {
   const [formData, setFormData] = useState({
@@ -15,53 +13,200 @@ function Contact() {
   const [loading, setLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
-  const mapElement = useRef(null)
-  const API_KEY = import.meta.env.VITE_TOMTOM_API_KEY // from .env
+  const [validationErrors, setValidationErrors] = useState({})
+  const [submitCount, setSubmitCount] = useState(0)
 
-  const handleSubmit = (e) => {
+  // Get API URL from environment or use default
+  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+
+  // Form validation function
+  const validateForm = () => {
+    const errors = {}
+    
+    // Full name validation
+    if (!formData.fullName.trim()) {
+      errors.fullName = 'Full name is required'
+    } else if (formData.fullName.trim().length < 2) {
+      errors.fullName = 'Name must be at least 2 characters'
+    } else if (formData.fullName.length > 100) {
+      errors.fullName = 'Name cannot exceed 100 characters'
+    } else if (!/^[a-zA-Z\s'-]+$/.test(formData.fullName.trim())) {
+      errors.fullName = 'Name can only contain letters, spaces, hyphens, and apostrophes'
+    }
+
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!formData.email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!emailRegex.test(formData.email.trim())) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    // Phone validation (optional but must be valid if provided)
+    if (formData.phone && !/^[\+]?[1-9][\d\s\-\(\)]{7,20}$/.test(formData.phone.replace(/\s/g, ''))) {
+      errors.phone = 'Please enter a valid phone number'
+    }
+
+    // Company validation (optional)
+    if (formData.company && formData.company.length > 200) {
+      errors.company = 'Company name cannot exceed 200 characters'
+    }
+
+    // Service type validation
+    if (!formData.serviceType) {
+      errors.serviceType = 'Please select a service type'
+    }
+
+    // Message validation
+    if (!formData.message.trim()) {
+      errors.message = 'Message is required'
+    } else if (formData.message.trim().length < 10) {
+      errors.message = 'Message must be at least 10 characters'
+    } else if (formData.message.length > 1000) {
+      errors.message = 'Message cannot exceed 1000 characters'
+    }
+
+    return errors
+  }
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
     e.preventDefault()
+    
+    // Prevent multiple rapid submissions
+    if (loading) return
+
     setLoading(true)
     setError('')
     setSuccess(false)
+    setValidationErrors({})
 
-    // Simulate API call
-    setTimeout(() => {
-      setSuccess(true)
-      setFormData({ 
-        fullName: '', 
-        email: '', 
-        phone: '', 
-        company: '', 
-        serviceType: '', 
-        message: '' 
-      })
+    // Client-side validation
+    const errors = validateForm()
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors)
       setLoading(false)
-    }, 1000)
-  }
+      return
+    }
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    })
-  }
+    // Check submission rate limit (client-side)
+    if (submitCount >= 3) {
+      setError('You have submitted too many forms. Please wait a moment before trying again.')
+      setLoading(false)
+      return
+    }
 
-  useEffect(() => {
-    if (mapElement.current && API_KEY) {
-      const map = tt.map({
-        key: API_KEY,
-        container: mapElement.current,
-        center: [-74.006, 40.7128], // NYC coordinates
-        zoom: 13
+    try {
+      const response = await fetch(`${API_URL}/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          fullName: formData.fullName.trim(),
+          email: formData.email.trim().toLowerCase(),
+          phone: formData.phone ? formData.phone.trim() : '',
+          company: formData.company ? formData.company.trim() : '',
+          serviceType: formData.serviceType,
+          message: formData.message.trim()
+        })
       })
 
-      new tt.Marker()
-        .setLngLat([-74.006, 40.7128])
-        .addTo(map)
+      const data = await response.json()
 
-      return () => map.remove()
+      if (response.ok && data.success) {
+        // Success
+        setSuccess(true)
+        setSubmitCount(prev => prev + 1)
+        
+        // Reset form
+        setFormData({ 
+          fullName: '', 
+          email: '', 
+          phone: '', 
+          company: '', 
+          serviceType: '', 
+          message: '' 
+        })
+        
+        // Auto-hide success message after 10 seconds
+        setTimeout(() => setSuccess(false), 10000)
+        
+        // Log success for analytics (optional)
+        console.log('Contact form submitted successfully:', data.data?.id)
+        
+      } else {
+        // Handle API errors
+        if (data.details && Array.isArray(data.details)) {
+          // Server validation errors
+          const serverErrors = {}
+          data.details.forEach(detail => {
+            const lowerDetail = detail.toLowerCase()
+            if (lowerDetail.includes('name') || lowerDetail.includes('fullname')) {
+              serverErrors.fullName = detail
+            } else if (lowerDetail.includes('email')) {
+              serverErrors.email = detail
+            } else if (lowerDetail.includes('phone')) {
+              serverErrors.phone = detail
+            } else if (lowerDetail.includes('service')) {
+              serverErrors.serviceType = detail
+            } else if (lowerDetail.includes('message')) {
+              serverErrors.message = detail
+            }
+          })
+          setValidationErrors(serverErrors)
+        }
+        
+        setError(data.error || 'Failed to send message. Please try again.')
+      }
+      
+    } catch (err) {
+      console.error('Contact form submission error:', err)
+      
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
+        setError('Unable to connect to server. Please check your internet connection and try again.')
+      } else {
+        setError('An unexpected error occurred. Please try again later.')
+      }
+    } finally {
+      setLoading(false)
     }
-  }, [API_KEY])
+  }
+
+  // Handle input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
+
+    // Clear validation error when user starts typing
+    if (validationErrors[name]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [name]: ''
+      }))
+    }
+
+    // Clear general error when user makes changes
+    if (error) {
+      setError('')
+    }
+  }
+
+  // Reset submit count after 1 hour
+  useEffect(() => {
+    if (submitCount > 0) {
+      const timer = setTimeout(() => {
+        setSubmitCount(0)
+      }, 60 * 60 * 1000) // 1 hour
+
+      return () => clearTimeout(timer)
+    }
+  }, [submitCount])
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
@@ -90,32 +235,32 @@ function Contact() {
             <div className="space-y-6">
               {/* Main Office */}
               <div className="flex items-start space-x-4">
-                <div className="bg-teal-600 p-3 rounded-lg">
+                <div className="bg-teal-600 p-3 rounded-lg flex-shrink-0">
                   <MapPin className="w-6 h-6" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-white mb-1">Main Office</h3>
-                  <p className="text-gray-300">123 Legal Plaza, Suite 500</p>
-                  <p className="text-gray-300">New York, NY 10001</p>
-                  <p className="text-gray-300">United States</p>
+                  <p className="text-gray-300">VIIT - Computer Science Department</p>
+                  <p className="text-gray-300">Pune, Maharashtra</p>
+                  <p className="text-gray-300">India</p>
                 </div>
               </div>
 
               {/* Phone */}
               <div className="flex items-start space-x-4">
-                <div className="bg-teal-600 p-3 rounded-lg">
+                <div className="bg-teal-600 p-3 rounded-lg flex-shrink-0">
                   <Phone className="w-6 h-6" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-white mb-1">Phone</h3>
-                  <p className="text-gray-300">Main: +1 (555) 123-4567</p>
-                  <p className="text-gray-300">Toll Free: +1 (800) 123-4567</p>
+                  <p className="text-gray-300">Main: +91 (20) 123-4567</p>
+                  <p className="text-gray-300">Mobile: +91 98765-43210</p>
                 </div>
               </div>
 
               {/* Email */}
               <div className="flex items-start space-x-4">
-                <div className="bg-teal-600 p-3 rounded-lg">
+                <div className="bg-teal-600 p-3 rounded-lg flex-shrink-0">
                   <Mail className="w-6 h-6" />
                 </div>
                 <div>
@@ -127,20 +272,20 @@ function Contact() {
 
               {/* Business Hours */}
               <div className="flex items-start space-x-4">
-                <div className="bg-teal-600 p-3 rounded-lg">
+                <div className="bg-teal-600 p-3 rounded-lg flex-shrink-0">
                   <Clock className="w-6 h-6" />
                 </div>
                 <div>
                   <h3 className="font-semibold text-white mb-1">Business Hours</h3>
-                  <p className="text-gray-300">Monday - Friday: 9:00 AM - 6:00 PM EST</p>
-                  <p className="text-gray-300">Saturday: 10:00 AM - 2:00 PM EST</p>
+                  <p className="text-gray-300">Monday - Friday: 9:00 AM - 6:00 PM IST</p>
+                  <p className="text-gray-300">Saturday: 10:00 AM - 2:00 PM IST</p>
                   <p className="text-gray-300">Sunday: Closed</p>
                 </div>
               </div>
 
               {/* International Offices */}
               <div className="flex items-start space-x-4">
-                <div className="bg-teal-600 p-3 rounded-lg">
+                <div className="bg-teal-600 p-3 rounded-lg flex-shrink-0">
                   <Globe className="w-6 h-6" />
                 </div>
                 <div>
@@ -154,22 +299,29 @@ function Contact() {
           </div>
 
           {/* Contact Form */}
-          <div className="bg-gray-800 p-8 rounded-lg">
+          <div className="bg-gray-800 p-8 rounded-lg shadow-xl">
             <h2 className="text-2xl font-semibold mb-6">Send us a Message</h2>
             
             <div className="space-y-6">
+              {/* Error Message */}
               {error && (
-                <div className="bg-red-600 text-white px-4 py-3 rounded-lg">
-                  {error}
+                <div className="bg-red-600 text-white px-4 py-3 rounded-lg flex items-center space-x-2 animate-pulse">
+                  <AlertCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm">{error}</span>
                 </div>
               )}
+              
+              {/* Success Message */}
               {success && (
-                <div className="bg-green-600 text-white px-4 py-3 rounded-lg">
-                  Message sent successfully! We'll get back to you soon.
+                <div className="bg-green-600 text-white px-4 py-3 rounded-lg flex items-center space-x-2 animate-pulse">
+                  <CheckCircle className="w-5 h-5 flex-shrink-0" />
+                  <span className="text-sm">Message sent successfully! We'll get back to you within 24 hours.</span>
                 </div>
               )}
 
+              {/* Form Fields */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Full Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Full Name *
@@ -180,10 +332,22 @@ function Contact() {
                     value={formData.fullName}
                     onChange={handleChange}
                     placeholder="Your full name"
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                    className={`w-full bg-gray-700 border rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-1 transition-all duration-200 ${
+                      validationErrors.fullName 
+                        ? 'border-red-500 focus:border-red-400 focus:ring-red-400' 
+                        : 'border-gray-600 focus:border-teal-500 focus:ring-teal-500'
+                    }`}
+                    maxLength={100}
                   />
+                  {validationErrors.fullName && (
+                    <p className="text-red-400 text-xs mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.fullName}
+                    </p>
+                  )}
                 </div>
 
+                {/* Email */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Email Address *
@@ -194,12 +358,23 @@ function Contact() {
                     value={formData.email}
                     onChange={handleChange}
                     placeholder="your@email.com"
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                    className={`w-full bg-gray-700 border rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-1 transition-all duration-200 ${
+                      validationErrors.email 
+                        ? 'border-red-500 focus:border-red-400 focus:ring-red-400' 
+                        : 'border-gray-600 focus:border-teal-500 focus:ring-teal-500'
+                    }`}
                   />
+                  {validationErrors.email && (
+                    <p className="text-red-400 text-xs mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.email}
+                    </p>
+                  )}
                 </div>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* Phone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Phone Number
@@ -209,11 +384,22 @@ function Contact() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleChange}
-                    placeholder="+1 (555) 123-4567"
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                    placeholder="+91 98765-43210"
+                    className={`w-full bg-gray-700 border rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-1 transition-all duration-200 ${
+                      validationErrors.phone 
+                        ? 'border-red-500 focus:border-red-400 focus:ring-red-400' 
+                        : 'border-gray-600 focus:border-teal-500 focus:ring-teal-500'
+                    }`}
                   />
+                  {validationErrors.phone && (
+                    <p className="text-red-400 text-xs mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.phone}
+                    </p>
+                  )}
                 </div>
 
+                {/* Company */}
                 <div>
                   <label className="block text-sm font-medium text-gray-300 mb-2">
                     Company
@@ -224,11 +410,19 @@ function Contact() {
                     value={formData.company}
                     onChange={handleChange}
                     placeholder="Your company name"
-                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                    className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-all duration-200"
+                    maxLength={200}
                   />
+                  {validationErrors.company && (
+                    <p className="text-red-400 text-xs mt-1 flex items-center">
+                      <AlertCircle className="w-3 h-3 mr-1" />
+                      {validationErrors.company}
+                    </p>
+                  )}
                 </div>
               </div>
 
+              {/* Service Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
                   Type of Service *
@@ -237,7 +431,11 @@ function Contact() {
                   name="serviceType"
                   value={formData.serviceType}
                   onChange={handleChange}
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors"
+                  className={`w-full bg-gray-700 border rounded-lg px-4 py-3 text-white focus:ring-1 transition-all duration-200 ${
+                    validationErrors.serviceType 
+                      ? 'border-red-500 focus:border-red-400 focus:ring-red-400' 
+                      : 'border-gray-600 focus:border-teal-500 focus:ring-teal-500'
+                  }`}
                 >
                   <option value="">Select a service...</option>
                   <option value="patents">Patents</option>
@@ -247,11 +445,18 @@ function Contact() {
                   <option value="licensing">Licensing</option>
                   <option value="consultation">General Consultation</option>
                 </select>
+                {validationErrors.serviceType && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {validationErrors.serviceType}
+                  </p>
+                )}
               </div>
 
+              {/* Message */}
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Message *
+                  Message * ({formData.message.length}/1000)
                 </label>
                 <textarea
                   name="message"
@@ -259,17 +464,38 @@ function Contact() {
                   onChange={handleChange}
                   rows="5"
                   placeholder="Tell us about your IP needs and how we can help..."
-                  className="w-full bg-gray-700 border border-gray-600 rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:border-teal-500 focus:ring-1 focus:ring-teal-500 transition-colors resize-none"
+                  className={`w-full bg-gray-700 border rounded-lg px-4 py-3 text-white placeholder-gray-400 focus:ring-1 transition-all duration-200 resize-none ${
+                    validationErrors.message 
+                      ? 'border-red-500 focus:border-red-400 focus:ring-red-400' 
+                      : 'border-gray-600 focus:border-teal-500 focus:ring-teal-500'
+                  }`}
+                  maxLength={1000}
                 />
+                {validationErrors.message && (
+                  <p className="text-red-400 text-xs mt-1 flex items-center">
+                    <AlertCircle className="w-3 h-3 mr-1" />
+                    {validationErrors.message}
+                  </p>
+                )}
               </div>
 
+              {/* Submit Button */}
               <button
                 onClick={handleSubmit}
-                disabled={loading}
-                className="w-full bg-gradient-to-r from-teal-600 to-teal-500 text-white py-3 px-6 rounded-lg font-medium hover:from-teal-700 hover:to-teal-600 focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 flex items-center justify-center space-x-2"
+                disabled={loading || submitCount >= 3}
+                className={`w-full py-3 px-6 rounded-lg font-medium transition-all duration-200 flex items-center justify-center space-x-2 ${
+                  loading || submitCount >= 3
+                    ? 'bg-gray-600 cursor-not-allowed text-gray-300'
+                    : 'bg-gradient-to-r from-teal-600 to-teal-500 hover:from-teal-700 hover:to-teal-600 text-white focus:ring-2 focus:ring-teal-500 focus:ring-offset-2 focus:ring-offset-gray-800'
+                }`}
               >
                 {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white" />
+                  <>
+                    <Loader className="w-5 h-5 animate-spin" />
+                    <span>Sending...</span>
+                  </>
+                ) : submitCount >= 3 ? (
+                  <span>Rate limit reached - please wait</span>
                 ) : (
                   <>
                     <Send className="w-5 h-5" />
@@ -283,28 +509,27 @@ function Contact() {
       </div>
 
       {/* Map Section */}
-        <div className="bg-gray-800 py-16">
-          <div className="max-w-6xl mx-auto px-4">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold mb-2">Visit Our Office</h2>
-              <p className="text-gray-300">Located at VIIT - Computer Science Department</p>
-            </div>
-            
-            <div className="bg-gray-700 rounded-lg overflow-hidden h-96">
-              <iframe
-                title="Google Map Location"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.418632656263!2d73.8842823!3d18.459561!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2eaf4662547c9%3A0xd96690b0786458f5!2sVIIT%20-%20Computer%20Science%20Department!5e0!3m2!1sen!2sin!4v1692174556789!5m2!1sen!2sin"
-                width="100%"
-                height="100%"
-                style={{ border: 0 }}
-                allowFullScreen=""
-                loading="lazy"
-                referrerPolicy="no-referrer-when-downgrade"
-              ></iframe>
-            </div>
+      <div className="bg-gray-800 py-16">
+        <div className="max-w-6xl mx-auto px-4">
+          <div className="text-center mb-8">
+            <h2 className="text-3xl font-bold mb-2">Visit Our Office</h2>
+            <p className="text-gray-300">Located at VIIT - Computer Science Department</p>
+          </div>
+          
+          <div className="bg-gray-700 rounded-lg overflow-hidden h-96 shadow-xl">
+            <iframe
+              title="Google Map Location"
+              src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3771.418632656263!2d73.8842823!3d18.459561!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x3bc2eaf4662547c9%3A0xd96690b0786458f5!2sVIIT%20-%20Computer%20Science%20Department!5e0!3m2!1sen!2sin!4v1692174556789!5m2!1sen!2sin"
+              width="100%"
+              height="100%"
+              style={{ border: 0 }}
+              allowFullScreen=""
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            ></iframe>
           </div>
         </div>
-
+      </div>
     </div>
   )
 }
