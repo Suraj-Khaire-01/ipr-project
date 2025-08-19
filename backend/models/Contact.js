@@ -5,161 +5,165 @@ const contactSchema = new mongoose.Schema({
     type: String,
     required: [true, 'Full name is required'],
     trim: true,
-    maxLength: [100, 'Name cannot exceed 100 characters'],
-    minLength: [2, 'Name must be at least 2 characters']
+    minlength: [2, 'Name must be at least 2 characters'],
+    maxlength: [100, 'Name cannot exceed 100 characters'],
+    match: [/^[a-zA-Z\s'-]+$/, 'Name can only contain letters, spaces, hyphens, and apostrophes']
   },
+  
   email: {
     type: String,
     required: [true, 'Email is required'],
-    match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, 'Please enter a valid email'],
-    lowercase: true,
     trim: true,
-    index: true
+    lowercase: true,
+    match: [/^[^\s@]+@[^\s@]+\.[^\s@]+$/, 'Please enter a valid email address'],
+    index: true // For faster queries
   },
+  
   phone: {
     type: String,
     trim: true,
     validate: {
       validator: function(v) {
-        // Allow empty phone or valid phone number
-        if (!v) return true;
-        return /^[\+]?[1-9][\d]{0,15}$/.test(v.replace(/[\s\-\(\)]/g, ''));
+        // Allow empty phone numbers, but validate if provided
+        return !v || /^[\+]?[1-9][\d\s\-\(\)]{7,20}$/.test(v.replace(/\s/g, ''));
       },
       message: 'Please enter a valid phone number'
     }
   },
+  
   company: {
     type: String,
     trim: true,
-    maxLength: [200, 'Company name cannot exceed 200 characters']
+    maxlength: [200, 'Company name cannot exceed 200 characters']
   },
+  
   serviceType: {
     type: String,
     required: [true, 'Service type is required'],
     enum: {
       values: ['patents', 'trademarks', 'copyrights', 'ip-litigation', 'licensing', 'consultation'],
-      message: 'Invalid service type'
+      message: 'Please select a valid service type'
     }
   },
+  
   message: {
     type: String,
     required: [true, 'Message is required'],
     trim: true,
-    maxLength: [1000, 'Message cannot exceed 1000 characters'],
-    minLength: [10, 'Message must be at least 10 characters']
+    minlength: [10, 'Message must be at least 10 characters'],
+    maxlength: [1000, 'Message cannot exceed 1000 characters']
   },
-  status: {
-    type: String,
-    enum: ['new', 'in-progress', 'resolved'],
-    default: 'new',
-    index: true
-  },
-  priority: {
-    type: String,
-    enum: ['low', 'medium', 'high', 'urgent'],
-    default: 'medium'
-  },
-  assignedTo: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'User', // If you have a User model for staff
-    default: null
-  },
-  notes: [{
-    content: {
-      type: String,
-      required: true
-    },
-    addedBy: {
-      type: String,
-      required: true
-    },
-    addedAt: {
-      type: Date,
-      default: Date.now
-    }
-  }],
-  // Tracking information
-  ipAddress: {
-    type: String
-  },
-  userAgent: {
-    type: String
-  },
-  referrer: {
-    type: String
-  },
-  // Timestamps
-  createdAt: {
+  
+  submittedAt: {
     type: Date,
     default: Date.now,
     index: true
   },
-  updatedAt: {
-    type: Date,
-    default: Date.now
+  
+  status: {
+    type: String,
+    enum: ['pending', 'reviewed', 'responded', 'closed'],
+    default: 'pending'
   },
-  // Soft delete
-  isDeleted: {
-    type: Boolean,
-    default: false
+  
+  // Metadata for tracking and security
+  ipAddress: {
+    type: String,
+    required: false
   },
-  deletedAt: {
-    type: Date,
-    default: null
+  
+  userAgent: {
+    type: String,
+    required: false
+  },
+  
+  // Admin notes (for internal use)
+  adminNotes: {
+    type: String,
+    maxlength: [500, 'Admin notes cannot exceed 500 characters']
+  },
+  
+  // Response tracking
+  respondedAt: {
+    type: Date
+  },
+  
+  respondedBy: {
+    type: String // Could be admin username or ID
   }
+}, {
+  timestamps: true, // Adds createdAt and updatedAt automatically
+  collection: 'contacts'
 });
 
-// Update the updatedAt field before saving
-contactSchema.pre('save', function(next) {
-  this.updatedAt = Date.now();
-  next();
+// Index for efficient queries
+contactSchema.index({ submittedAt: -1 });
+contactSchema.index({ email: 1, submittedAt: -1 });
+contactSchema.index({ status: 1, submittedAt: -1 });
+
+// Virtual for formatted submission date
+contactSchema.virtual('formattedSubmissionDate').get(function() {
+  return this.submittedAt.toLocaleDateString('en-IN', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
 });
 
-// Add compound indexes for better query performance
-contactSchema.index({ status: 1, createdAt: -1 });
-contactSchema.index({ serviceType: 1, status: 1 });
-contactSchema.index({ createdAt: -1, isDeleted: 1 });
-
-// Virtual for full contact info
-contactSchema.virtual('contactInfo').get(function() {
-  return {
-    name: this.fullName,
-    email: this.email,
-    phone: this.phone || 'Not provided',
-    company: this.company || 'Not provided'
+// Virtual for service type display name
+contactSchema.virtual('serviceTypeDisplay').get(function() {
+  const serviceMap = {
+    'patents': 'Patents',
+    'trademarks': 'Trademarks',
+    'copyrights': 'Copyrights',
+    'ip-litigation': 'IP Litigation',
+    'licensing': 'Licensing',
+    'consultation': 'General Consultation'
   };
+  return serviceMap[this.serviceType] || this.serviceType;
 });
 
-// Static method to get contacts by status
-contactSchema.statics.findByStatus = function(status) {
-  return this.find({ 
-    status: status, 
-    isDeleted: false 
-  }).sort({ createdAt: -1 });
+// Static method to get contacts by service type
+contactSchema.statics.findByServiceType = function(serviceType) {
+  return this.find({ serviceType }).sort({ submittedAt: -1 });
 };
 
 // Static method to get recent contacts
-contactSchema.statics.findRecent = function(limit = 10) {
-  return this.find({ isDeleted: false })
-    .sort({ createdAt: -1 })
-    .limit(limit);
+contactSchema.statics.findRecent = function(days = 30) {
+  const dateThreshold = new Date();
+  dateThreshold.setDate(dateThreshold.getDate() - days);
+  
+  return this.find({ 
+    submittedAt: { $gte: dateThreshold } 
+  }).sort({ submittedAt: -1 });
 };
 
-// Instance method to add notes
-contactSchema.methods.addNote = function(content, addedBy) {
-  this.notes.push({
-    content: content,
-    addedBy: addedBy
-  });
+// Instance method to mark as responded
+contactSchema.methods.markAsResponded = function(respondedBy) {
+  this.status = 'responded';
+  this.respondedAt = new Date();
+  this.respondedBy = respondedBy;
   return this.save();
 };
 
-// Instance method to soft delete
-contactSchema.methods.softDelete = function() {
-  this.isDeleted = true;
-  this.deletedAt = Date.now();
-  return this.save();
-};
+// Pre-save middleware
+contactSchema.pre('save', function(next) {
+  // Ensure email is lowercase
+  if (this.email) {
+    this.email = this.email.toLowerCase();
+  }
+  
+  // Clean up phone number formatting
+  if (this.phone) {
+    this.phone = this.phone.replace(/\s+/g, ' ').trim();
+  }
+  
+  next();
+});
 
 // Export the model
-module.exports = mongoose.model('Contact', contactSchema);
+const Contact = mongoose.model('Contact', contactSchema);
+
+module.exports = Contact;

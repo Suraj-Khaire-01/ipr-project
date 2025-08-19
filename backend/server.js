@@ -1,308 +1,174 @@
 const express = require('express');
+const mongoose = require('mongoose');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
-const { connectDB, checkDBHealth } = require('./config/database');
-const contactRoutes = require('./routes/contact');
-
-// Load environment variables
+const rateLimit = require('express-rate-limit');
 require('dotenv').config();
 
-// Initialize Express app
+// Import routes
+const contactRoutes = require('./routes/contact');
+
 const app = express();
+const PORT = process.env.PORT || 3001;
 
-// Connect to MongoDB
-connectDB();
-
-// Trust proxy (important for rate limiting behind reverse proxy)
-app.set('trust proxy', 1);
+// Global rate limiting
+const globalLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: {
+    success: false,
+    error: 'Too many requests from this IP, please try again later.'
+  }
+});
 
 // Security middleware
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc: ["'self'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
-      scriptSrc: ["'self'"],
-      imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'"],
-      fontSrc: ["'self'"],
-      objectSrc: ["'none'"],
-      mediaSrc: ["'self'"],
-      frameSrc: ["'none'"],
-    },
-  },
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
 // CORS configuration
-const corsOptions = {
-  origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps or curl requests)
-    if (!origin) return callback(null, true);
-    
-    const allowedOrigins = [
-      process.env.FRONTEND_URL || 'http://localhost:3000',
-      'http://localhost:5173', // Vite dev server
-      'http://localhost:3001', // Same origin
-    ];
-    
-    if (allowedOrigins.indexOf(origin) !== -1) {
-      callback(null, true);
-    } else {
-      callback(new Error('Not allowed by CORS'));
-    }
-  },
+app.use(cors({
+  origin: [
+    'http://localhost:3000',
+    'http://localhost:5173',
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:5173',
+    // Add your production domain here
+    // 'https://yourwebsite.com'
+  ],
   credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
-};
-
-app.use(cors(corsOptions));
-
-// Logging middleware
-if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'));
-} else {
-  app.use(morgan('combined'));
-}
-
-// Body parsing middleware
-app.use(express.json({ 
-  limit: '10mb',
-  verify: (req, res, buf) => {
-    try {
-      JSON.parse(buf);
-    } catch (e) {
-      res.status(400).json({
-        success: false,
-        error: 'Invalid JSON format'
-      });
-      throw new Error('Invalid JSON');
-    }
-  }
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
-app.use(express.urlencoded({ 
-  extended: true, 
-  limit: '10mb' 
-}));
+// Middleware
+app.use(globalLimiter);
+app.use(morgan('combined')); // Logging
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// API Routes
-app.use('/api/contact', contactRoutes);
+// Trust proxy (important for rate limiting when behind a proxy)
+app.set('trust proxy', 1);
+
+// Database connection
+mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ip_secure_legal', {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+})
+.then(() => {
+  console.log('✅ Connected to MongoDB successfully');
+})
+.catch((error) => {
+  console.error('❌ MongoDB connection error:', error);
+  process.exit(1);
+});
 
 // Health check endpoint
-app.get('/api/health', async (req, res) => {
-  try {
-    const dbHealth = await checkDBHealth();
-    
-    res.json({
-      success: true,
-      status: 'OK',
-      timestamp: new Date().toISOString(),
-      environment: process.env.NODE_ENV || 'development',
-      database: dbHealth,
-      uptime: process.uptime(),
-      memory: {
-        used: Math.round(process.memoryUsage().heapUsed / 1024 / 1024 * 100) / 100,
-        total: Math.round(process.memoryUsage().heapTotal / 1024 / 1024 * 100) / 100
-      }
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      status: 'ERROR',
-      error: error.message
-    });
-  }
-});
-
-// API info endpoint
-app.get('/api', (req, res) => {
+app.get('/api/health', (req, res) => {
   res.json({
     success: true,
-    message: 'IP Legal Contact Form API',
+    message: 'Server is running',
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || 'development'
+  });
+});
+
+// API Routes
+app.use('/api', contactRoutes);
+
+// Root endpoint
+app.get('/', (req, res) => {
+  res.json({
+    success: true,
+    message: 'IP Secure Legal API Server',
     version: '1.0.0',
     endpoints: {
-      contact: {
-        POST: '/api/contact - Submit contact form',
-        GET: '/api/contact - Get all contacts (with pagination)',
-        GET_BY_ID: '/api/contact/:id - Get contact by ID',
-        UPDATE_STATUS: '/api/contact/:id/status - Update contact status',
-        DELETE: '/api/contact/:id - Delete contact',
-        STATS: '/api/contact/stats - Get contact statistics'
-      },
-      health: '/api/health - API health check'
-    },
-    rateLimit: {
-      contactSubmission: '5 per hour per IP',
-      generalAPI: '100 per 15 minutes per IP'
+      health: '/api/health',
+      contact: '/api/contact',
+      contacts: '/api/contacts'
     }
   });
 });
 
-// Global error handling middleware
-app.use((err, req, res, next) => {
-  console.error('❌ Global error handler:', err.stack);
-  
-  // Handle specific error types
-  if (err.name === 'ValidationError') {
-    return res.status(400).json({
-      success: false,
-      error: 'Validation Error',
-      details: err.message
-    });
-  }
-
-  if (err.name === 'CastError') {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid ID format',
-      details: err.message
-    });
-  }
-
-  if (err.name === 'MongoError' || err.name === 'MongoServerError') {
-    return res.status(500).json({
-      success: false,
-      error: 'Database Error',
-      details: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
-    });
-  }
-
-  if (err.code === 11000) {
-    return res.status(409).json({
-      success: false,
-      error: 'Duplicate Entry',
-      details: 'Resource already exists'
-    });
-  }
-
-  // Handle rate limiting errors
-  if (err.status === 429) {
-    return res.status(429).json({
-      success: false,
-      error: 'Too Many Requests',
-      details: 'Rate limit exceeded. Please try again later.',
-      retryAfter: err.retryAfter
-    });
-  }
-
-  // Handle CORS errors
-  if (err.message && err.message.includes('CORS')) {
-    return res.status(403).json({
-      success: false,
-      error: 'CORS Error',
-      details: 'Origin not allowed'
-    });
-  }
-
-  // Handle JSON parsing errors
-  if (err.type === 'entity.parse.failed') {
-    return res.status(400).json({
-      success: false,
-      error: 'Invalid JSON',
-      details: 'Request body contains invalid JSON'
-    });
-  }
-
-  // Handle payload too large errors
-  if (err.type === 'entity.too.large') {
-    return res.status(413).json({
-      success: false,
-      error: 'Payload Too Large',
-      details: 'Request body exceeds size limit'
-    });
-  }
-
-  // Default error response
-  const statusCode = err.status || err.statusCode || 500;
-  res.status(statusCode).json({
-    success: false,
-    error: process.env.NODE_ENV === 'development' ? err.message : 'Internal Server Error',
-    ...(process.env.NODE_ENV === 'development' && { stack: err.stack })
-  });
-});
-
-// 404 handler - must be after all routes
+// 404 handler
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
-    error: 'Route Not Found',
-    message: `Cannot ${req.method} ${req.originalUrl}`,
-    availableRoutes: {
-      'GET /api': 'API information',
-      'GET /api/health': 'Health check',
-      'POST /api/contact': 'Submit contact form',
-      'GET /api/contact': 'Get contacts (paginated)',
-      'GET /api/contact/:id': 'Get contact by ID',
-      'PUT /api/contact/:id/status': 'Update contact status',
-      'DELETE /api/contact/:id': 'Delete contact',
-      'GET /api/contact/stats': 'Get contact statistics'
-    }
+    error: 'Endpoint not found',
+    path: req.originalUrl
+  });
+});
+
+// Global error handler
+app.use((error, req, res, next) => {
+  console.error('Global error handler:', error);
+
+  // Mongoose validation error
+  if (error.name === 'ValidationError') {
+    const validationErrors = Object.values(error.errors).map(err => err.message);
+    return res.status(400).json({
+      success: false,
+      error: 'Validation failed',
+      details: validationErrors
+    });
+  }
+
+  // Mongoose cast error (invalid ObjectId)
+  if (error.name === 'CastError') {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid ID format'
+    });
+  }
+
+  // MongoDB duplicate key error
+  if (error.code === 11000) {
+    return res.status(400).json({
+      success: false,
+      error: 'Duplicate entry',
+      details: ['A record with this information already exists']
+    });
+  }
+
+  // JSON parsing error
+  if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
+    return res.status(400).json({
+      success: false,
+      error: 'Invalid JSON format'
+    });
+  }
+
+  // Default server error
+  res.status(500).json({
+    success: false,
+    error: 'Internal server error',
+    ...(process.env.NODE_ENV === 'development' && { details: error.message })
+  });
+});
+
+// Graceful shutdown
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received. Shutting down gracefully...');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed.');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received. Shutting down gracefully...');
+  mongoose.connection.close(() => {
+    console.log('MongoDB connection closed.');
+    process.exit(0);
   });
 });
 
 // Start server
-const PORT = process.env.PORT || 5000;
-
-const server = app.listen(PORT, () => {
-  console.log(`🚀 Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
-  console.log(`📡 API Base URL: http://localhost:${PORT}/api`);
-  console.log(`🏥 Health Check: http://localhost:${PORT}/api/health`);
-  
-  if (process.env.NODE_ENV === 'development') {
-    console.log(`📋 API Documentation: http://localhost:${PORT}/api`);
-  }
-});
-
-// Graceful shutdown handling
-process.on('SIGTERM', gracefulShutdown);
-process.on('SIGINT', gracefulShutdown);
-
-function gracefulShutdown(signal) {
-  console.log(`\n⚠️  Received ${signal}. Starting graceful shutdown...`);
-  
-  server.close((err) => {
-    if (err) {
-      console.error('❌ Error during server shutdown:', err);
-      process.exit(1);
-    }
-    
-    console.log('✅ Server closed successfully');
-    
-    // Close database connection
-    const mongoose = require('mongoose');
-    mongoose.connection.close((err) => {
-      if (err) {
-        console.error('❌ Error closing database connection:', err);
-        process.exit(1);
-      }
-      
-      console.log('✅ Database connection closed successfully');
-      console.log('👋 Graceful shutdown completed');
-      process.exit(0);
-    });
-  });
-  
-  // Force shutdown after timeout
-  setTimeout(() => {
-    console.error('⚠️  Forcing shutdown due to timeout');
-    process.exit(1);
-  }, 10000);
-}
-
-// Handle uncaught exceptions
-process.on('uncaughtException', (err) => {
-  console.error('💥 Uncaught Exception:', err);
-  console.error('Stack:', err.stack);
-  process.exit(1);
-});
-
-// Handle unhandled promise rejections
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('💥 Unhandled Rejection at:', promise);
-  console.error('Reason:', reason);
-  process.exit(1);
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
 });
 
 module.exports = app;
