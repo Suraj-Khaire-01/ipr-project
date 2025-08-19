@@ -17,6 +17,7 @@ import TrademarkServices from './Services/TrademarkServices'
 import CopyrightServices from './Services/CopyrightServices'
 import IndustrialDesignServices from './Services/IndustrialDesignServices'
 import IPLitigationPage from './Services/IPLitigationPage'
+import Login from './login/login'
 
 function App() {
   return (
@@ -57,6 +58,7 @@ function App() {
           <Route path="/copyrightservices" element={<CopyrightServices />}/>
           <Route path="/industrialdesignservices" element={<IndustrialDesignServices />}/>
           <Route path="/iplitigationpage" element={<IPLitigationPage />}/>
+          <Route path="/login" element={<Login />}/>
           {/* <Route path="/admin-login" element={<AdminLogin />} /> */}
         </Routes>
       </main>
