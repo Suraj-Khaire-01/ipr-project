@@ -131,7 +131,7 @@ router.post('/contact', contactRateLimit, validateContact, async (req, res) => {
 router.get('/contacts', async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
+    const limit = parseInt(req.query.limit) || 50; // Increased limit for admin dashboard
     const skip = (page - 1) * limit;
 
     const contacts = await Contact.find()
@@ -141,6 +141,11 @@ router.get('/contacts', async (req, res) => {
       .select('-ipAddress -userAgent'); // Exclude sensitive data
 
     const total = await Contact.countDocuments();
+
+    // For admin dashboard, return just the data array if no pagination needed
+    if (req.query.simple === 'true') {
+      return res.json(contacts);
+    }
 
     res.json({
       success: true,
@@ -184,6 +189,170 @@ router.get('/contact/:id', async (req, res) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch contact'
+    });
+  }
+});
+
+// PATCH /api/contacts/:id - Update contact status (NEW ROUTE FOR ADMIN DASHBOARD)
+router.patch('/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, respondedAt, respondedBy, adminNotes } = req.body;
+
+    // Validate the status
+    const validStatuses = ['pending', 'reviewed', 'responded', 'closed'];
+    if (status && !validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid status',
+        details: [`Status must be one of: ${validStatuses.join(', ')}`]
+      });
+    }
+
+    // Find the contact
+    const contact = await Contact.findById(id);
+    if (!contact) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contact not found'
+      });
+    }
+
+    // Update fields
+    const updateData = {};
+    if (status) updateData.status = status;
+    if (respondedAt) updateData.respondedAt = new Date(respondedAt);
+    if (respondedBy) updateData.respondedBy = respondedBy;
+    if (adminNotes !== undefined) updateData.adminNotes = adminNotes;
+
+    // Update the contact
+    const updatedContact = await Contact.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true }
+    );
+
+    res.json({
+      success: true,
+      message: 'Contact updated successfully',
+      data: updatedContact
+    });
+
+    console.log(`Contact ${id} updated by ${respondedBy || 'admin'}. Status: ${status}`);
+
+  } catch (error) {
+    console.error('Error updating contact:', error);
+
+    // Handle validation errors
+    if (error.name === 'ValidationError') {
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: validationErrors
+      });
+    }
+
+    // Handle invalid ObjectId
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid contact ID'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update contact'
+    });
+  }
+});
+
+// DELETE /api/contacts/:id - Delete contact (OPTIONAL - for admin cleanup)
+router.delete('/contacts/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const contact = await Contact.findById(id);
+    if (!contact) {
+      return res.status(404).json({
+        success: false,
+        error: 'Contact not found'
+      });
+    }
+
+    await Contact.findByIdAndDelete(id);
+
+    res.json({
+      success: true,
+      message: 'Contact deleted successfully'
+    });
+
+    console.log(`Contact ${id} deleted by admin`);
+
+  } catch (error) {
+    console.error('Error deleting contact:', error);
+
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid contact ID'
+      });
+    }
+
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete contact'
+    });
+  }
+});
+
+// GET /api/contacts/stats - Get contact statistics (BONUS - for dashboard analytics)
+router.get('/contacts/stats', async (req, res) => {
+  try {
+    const totalContacts = await Contact.countDocuments();
+    const pendingContacts = await Contact.countDocuments({ status: 'pending' });
+    const reviewedContacts = await Contact.countDocuments({ status: 'reviewed' });
+    const respondedContacts = await Contact.countDocuments({ status: 'responded' });
+    
+    // Service type breakdown
+    const serviceStats = await Contact.aggregate([
+      {
+        $group: {
+          _id: '$serviceType',
+          count: { $sum: 1 }
+        }
+      },
+      {
+        $sort: { count: -1 }
+      }
+    ]);
+
+    // Recent submissions (last 7 days)
+    const recentDate = new Date();
+    recentDate.setDate(recentDate.getDate() - 7);
+    const recentContacts = await Contact.countDocuments({
+      submittedAt: { $gte: recentDate }
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total: totalContacts,
+        pending: pendingContacts,
+        reviewed: reviewedContacts,
+        responded: respondedContacts,
+        closed: await Contact.countDocuments({ status: 'closed' }),
+        recent: recentContacts,
+        serviceBreakdown: serviceStats
+      }
+    });
+
+  } catch (error) {
+    console.error('Error fetching contact stats:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch statistics'
     });
   }
 });

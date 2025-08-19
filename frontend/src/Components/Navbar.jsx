@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react"
 import { Sun, Moon, Menu, X, ChevronDown, Scale, Copyright, FileText, Palette, Gavel, FileCheck } from "lucide-react"
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/clerk-react'
+import { SignedIn, SignedOut, UserButton } from '@clerk/clerk-react'
 
 const services = [
   { name: "Patents", href: "/patentservice", icon: FileText },
@@ -35,9 +35,8 @@ export default function Navbar() {
 
   return (
     <nav
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
-        scrolled ? "bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-lg" : "bg-transparent"
-      }`}
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${scrolled ? "bg-white/95 dark:bg-gray-900/95 backdrop-blur-md shadow-lg" : "bg-transparent"
+        }`}
     >
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
@@ -87,13 +86,14 @@ export default function Navbar() {
               Contact
             </a>
 
-            {/* Clerk Authentication */}
+            {/* Login Button (New) */}
             <SignedOut>
-              <SignInButton mode="modal">
-                <button className="text-gray-700 dark:text-gray-300 hover:text-teal-600 transition-colors">
-                  Client Login
-                </button>
-              </SignInButton>
+              <a
+                href="/login"
+                className="text-gray-700 dark:text-gray-300 hover:text-teal-600 transition-colors"
+              >
+                Login 
+              </a>
             </SignedOut>
             <SignedIn>
               <UserButton afterSignOutUrl="/" />
@@ -165,14 +165,15 @@ export default function Navbar() {
               <a href="/contact" className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-teal-600">
                 Contact
               </a>
-              
-              {/* Mobile Clerk Authentication */}
+
+              {/* Mobile Login */}
               <SignedOut>
-                <SignInButton mode="modal">
-                  <button className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-teal-600 w-full text-left">
-                    Client Login
-                  </button>
-                </SignInButton>
+                <a
+                  href="/login"
+                  className="block px-3 py-2 text-gray-700 dark:text-gray-300 hover:text-teal-600 w-full text-left"
+                >
+                  Login
+                </a>
               </SignedOut>
               <SignedIn>
                 <div className="px-3 py-2">

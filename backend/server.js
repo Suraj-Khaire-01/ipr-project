@@ -5,6 +5,8 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 require('dotenv').config();
+// import cors from "cors";
+// import express from "express";
 
 // Import routes
 const contactRoutes = require('./routes/contact');
@@ -27,6 +29,8 @@ app.use(helmet({
   crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 
+app.use(express.json());
+
 // CORS configuration
 app.use(cors({
   origin: [
@@ -34,11 +38,13 @@ app.use(cors({
     'http://localhost:5173',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
+    
     // Add your production domain here
     // 'https://yourwebsite.com'
   ],
-  credentials: true,
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+
+  // credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
