@@ -1,4 +1,4 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './Components/Navbar'
 import Footer from './Components/Footer'
 import Home from './Pages/Home'
@@ -20,10 +20,15 @@ import IPLitigationPage from './Services/IPLitigationPage'
 import Login from './login/login'
 
 function App() {
+  const location = useLocation()
+
+  // Hide Navbar & Footer on these routes
+  const hideLayoutRoutes = ["/admin-dashboard", "/admindashboard"]
+
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
-      {/* Common Navbar */}
-      <Navbar />
+      {/* Show Navbar only if not in hide list */}
+      {!hideLayoutRoutes.includes(location.pathname) && <Navbar />}
 
       {/* Page Routes */}
       <main className="flex-grow">
@@ -46,25 +51,24 @@ function App() {
             }
           />
           <Route path="/contact" element={<Contact />} />
-          {/* Uncomment if needed */}
           <Route path="/about" element={<About />} />
           <Route path="/insights" element={<Insights />} />
-          <Route path="/patentservice" element={<PatentServicesPage />}/>
-          <Route path="/consulation" element={<Consulation />}/>
-          <Route path="/requirements" element={<FilingRequirementsPage />}/>
-          <Route path="/patent" element={<PatentFilingProcess />}/>
-          <Route path="/copyright" element={<CopyrightFillingProcess />}/>
-          <Route path="/trademarkservices" element={<TrademarkServices />}/>
-          <Route path="/copyrightservices" element={<CopyrightServices />}/>
-          <Route path="/industrialdesignservices" element={<IndustrialDesignServices />}/>
-          <Route path="/iplitigationpage" element={<IPLitigationPage />}/>
-          <Route path="/login" element={<Login />}/>
-          {/* <Route path="/admin-login" element={<AdminLogin />} /> */}
+          <Route path="/patentservice" element={<PatentServicesPage />} />
+          <Route path="/consulation" element={<Consulation />} />
+          <Route path="/requirements" element={<FilingRequirementsPage />} />
+          <Route path="/patent" element={<PatentFilingProcess />} />
+          <Route path="/copyright" element={<CopyrightFillingProcess />} />
+          <Route path="/trademarkservices" element={<TrademarkServices />} />
+          <Route path="/copyrightservices" element={<CopyrightServices />} />
+          <Route path="/industrialdesignservices" element={<IndustrialDesignServices />} />
+          <Route path="/iplitigationpage" element={<IPLitigationPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/admindashboard" element={<AdminDashboard />} />
         </Routes>
       </main>
 
-      {/* Common Footer */}
-      <Footer />
+      {/* Show Footer only if not in hide list */}
+      {!hideLayoutRoutes.includes(location.pathname) && <Footer />}
     </div>
   )
 }

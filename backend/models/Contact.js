@@ -166,4 +166,4 @@ contactSchema.pre('save', function(next) {
 // Export the model
 const Contact = mongoose.model('Contact', contactSchema);
 
-module.exports = Contact;
+module.exports = Contact; 
