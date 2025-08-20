@@ -6,29 +6,43 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const fs = require('fs');
+const multer = require('multer'); // Add multer import
 require('dotenv').config();
 
 // Import routes
 const contactRoutes = require('./routes/contact');
-const patentRoutes = require('./routes/patents'); // Add patent routes
+const patentRoutes = require('./routes/patents');
+const consultationRoutes = require('./routes/consultations');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
 // Ensure upload directory exists
-const uploadDir = process.env.UPLOAD_PATH || './uploads';
+const uploadDir = path.join(__dirname, 'uploads/consultations');
 if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 // Global rate limiting
 const globalLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: {
     success: false,
     error: 'Too many requests from this IP, please try again later.'
   }
+});
+
+// Consultation-specific rate limiting
+const consultationLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 5,
+  message: {
+    success: false,
+    message: 'Too many consultation submissions. Please try again later.'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 // Security middleware
@@ -45,9 +59,6 @@ app.use(cors({
     'http://localhost:5173',
     'http://127.0.0.1:3000',
     'http://127.0.0.1:5173',
-    
-    // Add your production domain here
-    // 'https://yourwebsite.com'
   ],
   methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -55,14 +66,14 @@ app.use(cors({
 
 // Middleware
 app.use(globalLimiter);
-app.use(morgan('combined')); // Logging
+app.use(morgan('combined'));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, uploadDir)));
+app.use('/uploads/consultations', express.static(uploadDir));
 
-// Trust proxy (important for rate limiting when behind a proxy)
+// Trust proxy
 app.set('trust proxy', 1);
 
 // Database connection
@@ -90,7 +101,36 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api', contactRoutes);
-app.use('/api/patents', patentRoutes); // Add patent routes
+app.use('/api/patents', patentRoutes);
+app.use('/api/consultations', consultationLimiter, consultationRoutes);
+
+
+// Multer error handling
+app.use((error, req, res, next) => {
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      return res.status(400).json({
+        success: false,
+        message: 'File size too large. Maximum size allowed is 10MB.'
+      });
+    }
+    if (error.code === 'LIMIT_FILE_COUNT') {
+      return res.status(400).json({
+        success: false,
+        message: 'Too many files. Maximum 10 files allowed.'
+      });
+    }
+  }
+  
+  if (error.message === 'Invalid file type. Only PDF, DOC, DOCX, JPG, JPEG, and PNG files are allowed.') {
+    return res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+  
+  next(error);
+});
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -102,12 +142,13 @@ app.get('/', (req, res) => {
       health: '/api/health',
       contact: '/api/contact',
       contacts: '/api/contacts',
-      patents: '/api/patents'
+      patents: '/api/patents',
+      consultations: '/api/consultations'
     }
   });
 });
 
-// 404 handler (fixed for Express 5)
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({
     success: false,
@@ -120,7 +161,6 @@ app.use((req, res) => {
 app.use((error, req, res, next) => {
   console.error('Global error handler:', error);
 
-  // Mongoose validation error
   if (error.name === 'ValidationError') {
     const validationErrors = Object.values(error.errors).map(err => err.message);
     return res.status(400).json({
@@ -130,7 +170,6 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // Mongoose cast error (invalid ObjectId)
   if (error.name === 'CastError') {
     return res.status(400).json({
       success: false,
@@ -138,7 +177,6 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // MongoDB duplicate key error
   if (error.code === 11000) {
     return res.status(400).json({
       success: false,
@@ -147,7 +185,6 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // JSON parsing error
   if (error instanceof SyntaxError && error.status === 400 && 'body' in error) {
     return res.status(400).json({
       success: false,
@@ -155,24 +192,6 @@ app.use((error, req, res, next) => {
     });
   }
 
-  // Multer file upload error
-  if (error.code === 'LIMIT_FILE_SIZE') {
-    return res.status(400).json({
-      success: false,
-      error: 'File too large',
-      details: ['Maximum file size is 10MB']
-    });
-  }
-
-  if (error.code === 'LIMIT_UNEXPECTED_FILE') {
-    return res.status(400).json({
-      success: false,
-      error: 'Too many files',
-      details: ['Maximum 10 files allowed per upload']
-    });
-  }
-
-  // Default server error
   res.status(500).json({
     success: false,
     error: 'Internal server error',
