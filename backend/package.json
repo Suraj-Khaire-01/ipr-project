@@ -32,8 +32,10 @@
     "mime-types": "^3.0.1",
     "mongoose": "^8.0.3",
     "morgan": "^1.10.0",
+    "multer": "^2.0.2",
     "nodemailer": "^6.9.7",
     "path-to-regexp": "^0.1.7",
+    "uuid": "^11.1.0",
     "validator": "^13.11.0"
   },
   "devDependencies": {

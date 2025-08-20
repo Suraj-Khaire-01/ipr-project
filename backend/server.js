@@ -4,15 +4,22 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
+const path = require('path');
+const fs = require('fs');
 require('dotenv').config();
-// import cors from "cors";
-// import express from "express";
 
 // Import routes
 const contactRoutes = require('./routes/contact');
+const patentRoutes = require('./routes/patents'); // Add patent routes
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Ensure upload directory exists
+const uploadDir = process.env.UPLOAD_PATH || './uploads';
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
 
 // Global rate limiting
 const globalLimiter = rateLimit({
@@ -42,8 +49,6 @@ app.use(cors({
     // Add your production domain here
     // 'https://yourwebsite.com'
   ],
-
-  // credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE','PATCH','OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
@@ -53,6 +58,9 @@ app.use(globalLimiter);
 app.use(morgan('combined')); // Logging
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, uploadDir)));
 
 // Trust proxy (important for rate limiting when behind a proxy)
 app.set('trust proxy', 1);
@@ -82,6 +90,7 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api', contactRoutes);
+app.use('/api/patents', patentRoutes); // Add patent routes
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -92,7 +101,8 @@ app.get('/', (req, res) => {
     endpoints: {
       health: '/api/health',
       contact: '/api/contact',
-      contacts: '/api/contacts'
+      contacts: '/api/contacts',
+      patents: '/api/patents'
     }
   });
 });
@@ -145,6 +155,23 @@ app.use((error, req, res, next) => {
     });
   }
 
+  // Multer file upload error
+  if (error.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      error: 'File too large',
+      details: ['Maximum file size is 10MB']
+    });
+  }
+
+  if (error.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).json({
+      success: false,
+      error: 'Too many files',
+      details: ['Maximum 10 files allowed per upload']
+    });
+  }
+
   // Default server error
   res.status(500).json({
     success: false,
@@ -175,6 +202,7 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
+  console.log(`📁 Upload directory: ${uploadDir}`);
 });
 
 module.exports = app;

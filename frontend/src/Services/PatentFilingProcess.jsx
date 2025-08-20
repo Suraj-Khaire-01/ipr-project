@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Upload,
   FileText,
@@ -8,6 +8,60 @@ import {
   User,
   Shield
 } from 'lucide-react';
+
+// API service functions
+const API_BASE_URL = 'http://localhost:3001/api';
+
+const patentAPI = {
+  createPatent: async (patentData) => {
+    const response = await fetch(`${API_BASE_URL}/patents`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(patentData),
+    });
+    return response.json();
+  },
+
+  updatePatent: async (id, patentData) => {
+    const response = await fetch(`${API_BASE_URL}/patents/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(patentData),
+    });
+    return response.json();
+  },
+
+  uploadFiles: async (id, files, type) => {
+    const formData = new FormData();
+    files.forEach(file => {
+      formData.append(type === 'technical' ? 'drawings' : 'documents', file);
+    });
+
+    const response = await fetch(
+      `${API_BASE_URL}/patents/${id}/${type === 'technical' ? 'technical-drawings' : 'supporting-documents'}`,
+      {
+        method: 'POST',
+        body: formData,
+      }
+    );
+    return response.json();
+  },
+
+  updateStep: async (id, step) => {
+    const response = await fetch(`${API_BASE_URL}/patents/${id}/step`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ step }),
+    });
+    return response.json();
+  },
+};
 
 const PatentFilingProcess = () => {
   const [currentStep, setCurrentStep] = useState(1);
@@ -20,6 +74,10 @@ const PatentFilingProcess = () => {
   const [technicalDrawings, setTechnicalDrawings] = useState([]);
   const [supportingDocuments, setSupportingDocuments] = useState([]);
   const [dragOver, setDragOver] = useState({ technical: false, supporting: false });
+  const [completedDocuments, setCompletedDocuments] = useState([]);
+  const [patentId, setPatentId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
   const steps = [
     { id: 1, title: 'Document\nPreparation', description: 'Gather required documents' },
@@ -32,21 +90,19 @@ const PatentFilingProcess = () => {
   ];
 
   const requiredDocuments = [
-    { title: 'Technical description', type: 'text' },
-    { title: 'Technical drawings', type: 'file' },
-    { title: 'Inventor details', type: 'text' },
-    { title: 'Power of attorney (if applicable)', type: 'file' }
+    { id: 1, title: 'Technical description', type: 'text' },
+    { id: 2, title: 'Technical drawings', type: 'file' },
+    { id: 3, title: 'Inventor details', type: 'text' },
+    { id: 4, title: 'Power of attorney (if applicable)', type: 'file' }
   ];
 
-  const [completedDocuments, setCompletedDocuments] = useState([]);
-
-    const toggleDocumentCompletion = (docId) => {
+  const toggleDocumentCompletion = (docId) => {
     if (completedDocuments.includes(docId)) {
-        setCompletedDocuments(completedDocuments.filter(id => id !== docId));
+      setCompletedDocuments(completedDocuments.filter(id => id !== docId));
     } else {
-        setCompletedDocuments([...completedDocuments, docId]);
+      setCompletedDocuments([...completedDocuments, docId]);
     }
-    };
+  };
 
   const handleInputChange = (e) => {
     setFormData({
@@ -94,17 +150,71 @@ const PatentFilingProcess = () => {
     }
   };
 
-  const nextStep = () => {
-    if (currentStep < 7) {
-      setCurrentStep(currentStep + 1);
-    }
-  };
-
   const isFormValid = () => {
     return formData.inventionTitle && 
            formData.inventorName && 
            formData.applicantName && 
            formData.technicalDescription;
+  };
+
+  const nextStep = async () => {
+    if (currentStep === 1 && !isFormValid()) {
+      setError('Please fill all required fields');
+      return;
+    }
+
+    setLoading(true);
+    setError('');
+
+    try {
+      if (currentStep === 1) {
+        // Save basic patent data
+        const patentData = {
+          inventionTitle: formData.inventionTitle,
+          inventorName: formData.inventorName,
+          applicantName: formData.applicantName,
+          technicalDescription: formData.technicalDescription,
+          completedDocuments: completedDocuments,
+          currentStep: 2
+        };
+
+        const result = await patentAPI.createPatent(patentData);
+        
+        if (result.success) {
+          setPatentId(result.data._id || result.data.id);
+          
+          // Upload files if any
+          if (technicalDrawings.length > 0) {
+            await patentAPI.uploadFiles(result.data._id || result.data.id, technicalDrawings, 'technical');
+          }
+          
+          if (supportingDocuments.length > 0) {
+            await patentAPI.uploadFiles(result.data._id || result.data.id, supportingDocuments, 'supporting');
+          }
+          
+          setCurrentStep(2);
+        } else {
+          setError(result.error || 'Failed to save patent data');
+        }
+      } else {
+        // For other steps, just update the step
+        if (patentId) {
+          await patentAPI.updateStep(patentId, currentStep + 1);
+        }
+        setCurrentStep(currentStep + 1);
+      }
+    } catch (err) {
+      setError('An error occurred while saving your data');
+      console.error('Error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const prevStep = () => {
+    if (currentStep > 1) {
+      setCurrentStep(currentStep - 1);
+    }
   };
 
   return (
@@ -127,6 +237,22 @@ const PatentFilingProcess = () => {
             Step-by-step guidance through your patent application
           </p>
         </div>
+
+        {/* Error Display */}
+        {error && (
+          <div className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm">{error}</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Progress Steps */}
         <div className="mb-16">
@@ -197,118 +323,39 @@ const PatentFilingProcess = () => {
           {currentStep === 1 && (
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
               {/* Required Documents Checklist */}
-                    <div className="mb-8">
-                    <h3 className="text-xl font-semibold mb-6 text-white">Required Documents Checklist:</h3>
-                    <div className="grid md:grid-cols-2 gap-4">
-                        {/* Technical description */}
-                        <div 
-                        className={`border rounded-lg p-4 transition-all cursor-pointer ${
-                            completedDocuments.includes(1)
-                            ? 'bg-teal-900/30 border-teal-700'
-                            : 'bg-blue-900/30 border-blue-700/50 hover:border-blue-500'
-                        }`}
-                        onClick={() => toggleDocumentCompletion(1)}
-                        >
-                        <div className="flex items-center space-x-3">
-                            <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
-                            completedDocuments.includes(1)
-                                ? 'bg-teal-500 border-teal-500'
-                                : 'border-2 border-blue-400'
-                            }`}>
-                            {completedDocuments.includes(1) && (
-                                <Check className="w-4 h-4 text-white" />
-                            )}
-                            </div>
-                            <span className={`${
-                            completedDocuments.includes(1) ? 'text-teal-200' : 'text-blue-200'
-                            }`}>
-                            Technical description
-                            </span>
+              <div className="mb-8">
+                <h3 className="text-xl font-semibold mb-6 text-white">Required Documents Checklist:</h3>
+                <div className="grid md:grid-cols-2 gap-4">
+                  {requiredDocuments.map((doc) => (
+                    <div 
+                      key={doc.id}
+                      className={`border rounded-lg p-4 transition-all cursor-pointer ${
+                        completedDocuments.includes(doc.id)
+                          ? 'bg-teal-900/30 border-teal-700'
+                          : 'bg-blue-900/30 border-blue-700/50 hover:border-blue-500'
+                      }`}
+                      onClick={() => toggleDocumentCompletion(doc.id)}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
+                          completedDocuments.includes(doc.id)
+                            ? 'bg-teal-500 border-teal-500'
+                            : 'border-2 border-blue-400'
+                        }`}>
+                          {completedDocuments.includes(doc.id) && (
+                            <Check className="w-4 h-4 text-white" />
+                          )}
                         </div>
-                        </div>
-
-                        {/* Technical drawings */}
-                        <div 
-                        className={`border rounded-lg p-4 transition-all cursor-pointer ${
-                            completedDocuments.includes(2)
-                            ? 'bg-teal-900/30 border-teal-700'
-                            : 'bg-blue-900/30 border-blue-700/50 hover:border-blue-500'
-                        }`}
-                        onClick={() => toggleDocumentCompletion(2)}
-                        >
-                        <div className="flex items-center space-x-3">
-                            <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
-                            completedDocuments.includes(2)
-                                ? 'bg-teal-500 border-teal-500'
-                                : 'border-2 border-blue-400'
-                            }`}>
-                            {completedDocuments.includes(2) && (
-                                <Check className="w-4 h-4 text-white" />
-                            )}
-                            </div>
-                            <span className={`${
-                            completedDocuments.includes(2) ? 'text-teal-200' : 'text-blue-200'
-                            }`}>
-                            Technical drawings
-                            </span>
-                        </div>
-                        </div>
-
-                        {/* Inventor details */}
-                        <div 
-                        className={`border rounded-lg p-4 transition-all cursor-pointer ${
-                            completedDocuments.includes(3)
-                            ? 'bg-teal-900/30 border-teal-700'
-                            : 'bg-blue-900/30 border-blue-700/50 hover:border-blue-500'
-                        }`}
-                        onClick={() => toggleDocumentCompletion(3)}
-                        >
-                        <div className="flex items-center space-x-3">
-                            <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
-                            completedDocuments.includes(3)
-                                ? 'bg-teal-500 border-teal-500'
-                                : 'border-2 border-blue-400'
-                            }`}>
-                            {completedDocuments.includes(3) && (
-                                <Check className="w-4 h-4 text-white" />
-                            )}
-                            </div>
-                            <span className={`${
-                            completedDocuments.includes(3) ? 'text-teal-200' : 'text-blue-200'
-                            }`}>
-                            Inventor details
-                            </span>
-                        </div>
-                        </div>
-
-                        {/* Power of attorney */}
-                        <div 
-                        className={`border rounded-lg p-4 transition-all cursor-pointer ${
-                            completedDocuments.includes(4)
-                            ? 'bg-teal-900/30 border-teal-700'
-                            : 'bg-blue-900/30 border-blue-700/50 hover:border-blue-500'
-                        }`}
-                        onClick={() => toggleDocumentCompletion(4)}
-                        >
-                        <div className="flex items-center space-x-3">
-                            <div className={`w-6 h-6 rounded flex items-center justify-center transition-all ${
-                            completedDocuments.includes(4)
-                                ? 'bg-teal-500 border-teal-500'
-                                : 'border-2 border-blue-400'
-                            }`}>
-                            {completedDocuments.includes(4) && (
-                                <Check className="w-4 h-4 text-white" />
-                            )}
-                            </div>
-                            <span className={`${
-                            completedDocuments.includes(4) ? 'text-teal-200' : 'text-blue-200'
-                            }`}>
-                            Power of attorney (if applicable)
-                            </span>
-                        </div>
-                        </div>
+                        <span className={`${
+                          completedDocuments.includes(doc.id) ? 'text-teal-200' : 'text-blue-200'
+                        }`}>
+                          {doc.title}
+                        </span>
+                      </div>
                     </div>
-                    </div>
+                  ))}
+                </div>
+              </div>
 
               {/* Form Fields */}
               <div className="space-y-6">
@@ -503,10 +550,10 @@ const PatentFilingProcess = () => {
           {/* Navigation */}
           <div className="flex justify-between mt-8">
             <button
-              onClick={() => setCurrentStep(Math.max(1, currentStep - 1))}
-              disabled={currentStep === 1}
+              onClick={prevStep}
+              disabled={currentStep === 1 || loading}
               className={`inline-flex items-center px-6 py-3 rounded-xl transition-all duration-200 ${
-                currentStep === 1
+                currentStep === 1 || loading
                   ? 'opacity-50 cursor-not-allowed text-gray-500'
                   : 'bg-gray-700 hover:bg-gray-600 text-white hover:scale-105'
               }`}
@@ -518,15 +565,27 @@ const PatentFilingProcess = () => {
             {currentStep < 7 && (
               <button
                 onClick={nextStep}
-                disabled={currentStep === 1 && !isFormValid()}
+                disabled={(currentStep === 1 && !isFormValid()) || loading}
                 className={`inline-flex items-center px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                  (currentStep === 1 && isFormValid()) || currentStep > 1
+                  ((currentStep === 1 && isFormValid()) || currentStep > 1) && !loading
                     ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:scale-105 shadow-lg'
                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
               >
-                Next Step
-                <ArrowRight className="w-4 h-4 ml-2" />
+                {loading ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    Next Step
+                    <ArrowRight className="w-4 h-4 ml-2" />
+                  </>
+                )}
               </button>
             )}
           </div>
