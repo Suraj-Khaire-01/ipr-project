@@ -18,6 +18,7 @@ import CopyrightServices from './Services/CopyrightServices'
 import IndustrialDesignServices from './Services/IndustrialDesignServices'
 import IPLitigationPage from './Services/IPLitigationPage'
 import Login from './login/login'
+import PatentGuidePage from './Guides/PatentGuidePage'
 
 function App() {
   const location = useLocation()
@@ -68,6 +69,7 @@ function App() {
           <Route path="/iplitigationpage" element={<IPLitigationPage />} />
           <Route path="/login" element={<Login />} />
           <Route path="/admindashboard" element={<AdminDashboard />} />
+          <Route path="/patentGuide" element={<PatentGuidePage/>}/>
         </Routes>
       </main>
 
