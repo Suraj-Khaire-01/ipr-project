@@ -10,7 +10,8 @@ require('dotenv').config();
 
 // Import routes
 const contactRoutes = require('./routes/contact');
-const patentRoutes = require('./routes/patents'); // Add patent routes
+const patentRoutes = require('./routes/patents');
+const copyrightRoutes = require('./routes/copyright'); // Add copyright routes
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -60,7 +61,8 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Serve uploaded files statically
-app.use('/uploads', express.static(path.join(__dirname, uploadDir)));
+app.use('/uploads/patent-uploads', express.static(path.join(__dirname, uploadDir)));
+app.use('/uploads/copyright-uploads', express.static(path.join(__dirname, 'copyright-uploads'))); // Serve copyright uploads
 
 // Trust proxy (important for rate limiting when behind a proxy)
 app.set('trust proxy', 1);
@@ -90,7 +92,8 @@ app.get('/api/health', (req, res) => {
 
 // API Routes
 app.use('/api', contactRoutes);
-app.use('/api/patents', patentRoutes); // Add patent routes
+app.use('/api/patents', patentRoutes);
+app.use('/api', copyrightRoutes); // Add copyright routes
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -102,7 +105,8 @@ app.get('/', (req, res) => {
       health: '/api/health',
       contact: '/api/contact',
       contacts: '/api/contacts',
-      patents: '/api/patents'
+      patents: '/api/patents',
+      copyright: '/api/copyright'
     }
   });
 });
@@ -203,6 +207,7 @@ app.listen(PORT, () => {
   console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`📁 Upload directory: ${uploadDir}`);
+  console.log(`📝 Copyright endpoints available at: /api/copyright`);
 });
 
 module.exports = app;

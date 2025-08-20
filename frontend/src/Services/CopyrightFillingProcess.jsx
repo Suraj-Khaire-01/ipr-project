@@ -1,5 +1,118 @@
-import React, { useState } from 'react';
-import { CheckCircle, Upload, Search, Award } from 'lucide-react';
+import { Award, CheckCircle, Search, Upload } from 'lucide-react';
+import { memo, useCallback, useRef, useState } from 'react';
+
+// Top-level memoized WorkDetails component to avoid remounting issues
+const WorkDetails = memo(({ formData, onChange }) => (
+  <div className="bg-gray-800 rounded-lg p-8">
+    <div className="mb-6">
+      <h3 className="text-xl font-semibold text-emerald-400 mb-2">Step 1: Work Details</h3>
+      <p className="text-gray-300">Enter work information</p>
+    </div>
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div>
+        <label className="block text-white font-medium mb-2">Title of Work *</label>
+        <input
+          type="text"
+          placeholder="Enter the title of your work"
+          value={formData.title}
+          onChange={(e) => onChange('title', e.target.value)}
+          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
+        />
+      </div>
+      
+      <div>
+        <label className="block text-white font-medium mb-2">Type of Work *</label>
+        <select
+          value={formData.workType}
+          onChange={(e) => onChange('workType', e.target.value)}
+          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+        >
+          <option value="">Select work type</option>
+          <option value="literary">Literary Work</option>
+          <option value="musical">Musical Work</option>
+          <option value="artistic">Artistic Work</option>
+          <option value="dramatic">Dramatic Work</option>
+          <option value="cinematographic">Cinematographic Work</option>
+          <option value="sound-recording">Sound Recording</option>
+        </select>
+      </div>
+      
+      <div>
+        <label className="block text-white font-medium mb-2">Language *</label>
+        <select
+          value={formData.language}
+          onChange={(e) => onChange('language', e.target.value)}
+          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+        >
+          <option value="">Select language</option>
+          <option value="english">English</option>
+          <option value="hindi">Hindi</option>
+          <option value="marathi">Marathi</option>
+          <option value="gujarati">Gujarati</option>
+          <option value="tamil">Tamil</option>
+          <option value="telugu">Telugu</option>
+          <option value="bengali">Bengali</option>
+          <option value="other">Other</option>
+        </select>
+      </div>
+      
+      <div>
+        <label className="block text-white font-medium mb-2">Author's Name *</label>
+        <input
+          type="text"
+          placeholder="Name of the creator/author"
+          value={formData.authorName}
+          onChange={(e) => onChange('authorName', e.target.value)}
+          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
+        />
+      </div>
+      
+      <div className="md:col-span-2">
+        <label className="block text-white font-medium mb-2">Applicant Name *</label>
+        <input
+          type="text"
+          placeholder="Name of person/entity applying for copyright"
+          value={formData.applicantName}
+          onChange={(e) => onChange('applicantName', e.target.value)}
+          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
+        />
+      </div>
+      
+      <div className="md:col-span-2">
+        <label className="block text-white font-medium mb-2">Description of Work *</label>
+        <textarea
+          placeholder="Brief description of your creative work..."
+          value={formData.description}
+          onChange={(e) => onChange('description', e.target.value)}
+          rows={4}
+          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
+        />
+      </div>
+      
+      <div>
+        <label className="block text-white font-medium mb-2">Date of First Publication (if published)</label>
+        <input
+          type="date"
+          value={formData.publicationDate}
+          onChange={(e) => onChange('publicationDate', e.target.value)}
+          className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
+        />
+      </div>
+      
+      <div className="flex items-center">
+        <input
+          type="checkbox"
+          id="published"
+          checked={formData.isPublished}
+          onChange={(e) => onChange('isPublished', e.target.checked)}
+          className="w-4 h-4 text-emerald-500 bg-gray-700 border-gray-600 rounded focus:ring-emerald-500"
+        />
+        <label htmlFor="published" className="ml-2 text-gray-300">Work has been published</label>
+      </div>
+    </div>
+  </div>
+));
 
 export default function CopyrightFillingProcess() {
   const [currentStep, setCurrentStep] = useState(1);
@@ -23,11 +136,144 @@ export default function CopyrightFillingProcess() {
     { id: 6, title: 'Certificate', description: 'Registration complete' }
   ];
 
-  const handleInputChange = (field, value) => {
+  const handleInputChange = useCallback((field, value) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  }, []);
+
+  // File input refs and handlers for UploadWorkStep
+  const primaryInputRef = useRef(null);
+  const supportingInputRef = useRef(null);
+
+  const handlePrimarySelect = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (file) setFormData(prev => ({ ...prev, primaryFileName: file.name, primaryFile: file }));
   };
 
-  const nextStep = () => {
+  const handleSupportingSelect = (e) => {
+    const files = e.target.files ? Array.from(e.target.files) : [];
+    const names = files.map(f => f.name);
+    setFormData(prev => ({ ...prev, supportingFilesNames: names, supportingFiles: files }));
+  };
+
+  // --- New: API wiring state and helpers ---
+  const [appId, setAppId] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  // Adjust this base if your backend runs on a different host/port
+  const API_BASE = 'http://localhost:3001/api';
+
+  async function createApplication() {
+    setErrorMessage('');
+    try {
+      setLoading(true);
+      const payload = {
+        title: formData.title,
+        workType: formData.workType,
+        language: formData.language,
+        authorName: formData.authorName,
+        applicantName: formData.applicantName,
+        description: formData.description,
+        publicationDate: formData.publicationDate || null,
+        isPublished: !!formData.isPublished
+      };
+
+      const res = await fetch(`${API_BASE}/copyright`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || data.message || 'Failed to create application');
+      setAppId(data.data._id || data.data.id || data.data._doc && data.data._doc._id);
+      setLoading(false);
+      return data.data;
+    } catch (err) {
+      setLoading(false);
+      setErrorMessage(err.message || 'Creation failed');
+      return null;
+    }
+  }
+
+  async function uploadPrimaryFile(id) {
+    if (!formData.primaryFile) return null;
+    setErrorMessage('');
+    try {
+      setLoading(true);
+      const fd = new FormData();
+      fd.append('primary', formData.primaryFile);
+      const res = await fetch(`${API_BASE}/copyright/${id}/primary-file`, {
+        method: 'POST',
+        body: fd
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) throw new Error(data.error || data.message || 'Primary upload failed');
+      return data.data;
+    } catch (err) {
+      setLoading(false);
+      setErrorMessage(err.message || 'Primary upload failed');
+      return null;
+    }
+  }
+
+  async function uploadSupportingFiles(id) {
+    const files = formData.supportingFiles || [];
+    if (!files.length) return [];
+    setErrorMessage('');
+    try {
+      setLoading(true);
+      const fd = new FormData();
+      files.forEach(f => fd.append('documents', f));
+      const res = await fetch(`${API_BASE}/copyright/${id}/supporting-documents`, {
+        method: 'POST',
+        body: fd
+      });
+      const data = await res.json();
+      setLoading(false);
+      if (!res.ok) throw new Error(data.error || data.message || 'Supporting upload failed');
+      return data.data || [];
+    } catch (err) {
+      setLoading(false);
+      setErrorMessage(err.message || 'Supporting upload failed');
+      return null;
+    }
+  }
+
+  // Update nextStep: persist on step transitions
+  const nextStep = async () => {
+    // If we're on step 1, create the application first
+    if (currentStep === 1) {
+      if (!formData.title) {
+        setErrorMessage('Title is required');
+        return;
+      }
+      const created = await createApplication();
+      if (!created) return; // errorMessage set by helper
+      setCurrentStep(2);
+      return;
+    }
+
+    // If we're on step 2, upload selected files (primary + supporting) then advance
+    if (currentStep === 2) {
+      if (!appId) {
+        // Try to create if appId missing
+        const created = await createApplication();
+        if (!created) return;
+      }
+
+      const primaryResult = await uploadPrimaryFile(appId);
+      if (primaryResult === null && formData.primaryFile) return; // failure
+
+      const supportingResult = await uploadSupportingFiles(appId);
+      if (supportingResult === null && (formData.supportingFiles || []).length > 0) return; // failure
+
+      // Refresh server-side record could be fetched here if needed
+      setCurrentStep(3);
+      return;
+    }
+
     if (currentStep < 6) setCurrentStep(currentStep + 1);
   };
 
@@ -60,117 +306,7 @@ export default function CopyrightFillingProcess() {
     </div>
   );
 
-  const WorkDetailsStep = () => (
-    <div className="bg-gray-800 rounded-lg p-8">
-      <div className="mb-6">
-        <h3 className="text-xl font-semibold text-emerald-400 mb-2">Step 1: Work Details</h3>
-        <p className="text-gray-300">Enter work information</p>
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div>
-          <label className="block text-white font-medium mb-2">Title of Work *</label>
-          <input
-            type="text"
-            placeholder="Enter the title of your work"
-            value={formData.title}
-            onChange={(e) => handleInputChange('title', e.target.value)}
-            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-white font-medium mb-2">Type of Work *</label>
-          <select
-            value={formData.workType}
-            onChange={(e) => handleInputChange('workType', e.target.value)}
-            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">Select work type</option>
-            <option value="literary">Literary Work</option>
-            <option value="musical">Musical Work</option>
-            <option value="artistic">Artistic Work</option>
-            <option value="dramatic">Dramatic Work</option>
-            <option value="cinematographic">Cinematographic Work</option>
-            <option value="sound-recording">Sound Recording</option>
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-white font-medium mb-2">Language *</label>
-          <select
-            value={formData.language}
-            onChange={(e) => handleInputChange('language', e.target.value)}
-            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
-          >
-            <option value="">Select language</option>
-            <option value="english">English</option>
-            <option value="hindi">Hindi</option>
-            <option value="marathi">Marathi</option>
-            <option value="gujarati">Gujarati</option>
-            <option value="tamil">Tamil</option>
-            <option value="telugu">Telugu</option>
-            <option value="bengali">Bengali</option>
-            <option value="other">Other</option>
-          </select>
-        </div>
-        
-        <div>
-          <label className="block text-white font-medium mb-2">Author's Name *</label>
-          <input
-            type="text"
-            placeholder="Name of the creator/author"
-            value={formData.authorName}
-            onChange={(e) => handleInputChange('authorName', e.target.value)}
-            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        
-        <div className="md:col-span-2">
-          <label className="block text-white font-medium mb-2">Applicant Name *</label>
-          <input
-            type="text"
-            placeholder="Name of person/entity applying for copyright"
-            value={formData.applicantName}
-            onChange={(e) => handleInputChange('applicantName', e.target.value)}
-            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        
-        <div className="md:col-span-2">
-          <label className="block text-white font-medium mb-2">Description of Work *</label>
-          <textarea
-            placeholder="Brief description of your creative work..."
-            value={formData.description}
-            onChange={(e) => handleInputChange('description', e.target.value)}
-            rows={4}
-            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        
-        <div>
-          <label className="block text-white font-medium mb-2">Date of First Publication (if published)</label>
-          <input
-            type="date"
-            value={formData.publicationDate}
-            onChange={(e) => handleInputChange('publicationDate', e.target.value)}
-            className="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:border-emerald-500"
-          />
-        </div>
-        
-        <div className="flex items-center">
-          <input
-            type="checkbox"
-            id="published"
-            checked={formData.isPublished}
-            onChange={(e) => handleInputChange('isPublished', e.target.checked)}
-            className="w-4 h-4 text-emerald-500 bg-gray-700 border-gray-600 rounded focus:ring-emerald-500"
-          />
-          <label htmlFor="published" className="ml-2 text-gray-300">Work has been published</label>
-        </div>
-      </div>
-    </div>
-  );
+  
 
   const UploadWorkStep = () => (
     <div className="bg-gray-800 rounded-lg p-8">
@@ -187,18 +323,24 @@ export default function CopyrightFillingProcess() {
           <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">Primary Work File</h3>
           <p className="text-gray-400 mb-4">Upload the main file of your creative work</p>
-          <button className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+          <input ref={primaryInputRef} type="file" name="primary" className="hidden" onChange={handlePrimarySelect} />
+          <button onClick={() => primaryInputRef.current && primaryInputRef.current.click()} className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
             Choose File
           </button>
+          {formData.primaryFileName && <div className="mt-2 text-sm text-gray-300">Selected: {formData.primaryFileName}</div>}
         </div>
         
         <div className="border-2 border-dashed border-gray-600 rounded-lg p-8 text-center hover:border-emerald-500 transition-colors">
           <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">Supporting Documents</h3>
           <p className="text-gray-400 mb-4">Additional files, drafts, or related materials</p>
-          <button className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
+          <input ref={supportingInputRef} type="file" name="documents" multiple className="hidden" onChange={handleSupportingSelect} />
+          <button onClick={() => supportingInputRef.current && supportingInputRef.current.click()} className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
             Choose Files
           </button>
+          {formData.supportingFilesNames && formData.supportingFilesNames.length > 0 && (
+            <div className="mt-2 text-sm text-gray-300">Selected: {formData.supportingFilesNames.join(', ')}</div>
+          )}
         </div>
       </div>
       
@@ -356,13 +498,13 @@ export default function CopyrightFillingProcess() {
 
   const renderCurrentStep = () => {
     switch(currentStep) {
-      case 1: return <WorkDetailsStep />;
+      case 1: return <WorkDetails formData={formData} onChange={handleInputChange} />;
       case 2: return <UploadWorkStep />;
       case 3: return <ApplicationFormStep />;
       case 4: return <PaymentStep />;
       case 5: return <ExaminationStep />;
       case 6: return <CertificateStep />;
-      default: return <WorkDetailsStep />;
+      default: return <WorkDetails formData={formData} onChange={handleInputChange} />;
     }
   };
 
@@ -375,6 +517,11 @@ export default function CopyrightFillingProcess() {
         </div>
         
         <StepIndicator />
+
+        {/* Feedback area */}
+        {errorMessage && <div className="mb-4 text-red-400 text-center">{errorMessage}</div>}
+        {loading && <div className="mb-4 text-yellow-300 text-center">Processing, please wait...</div>}
+        {appId && <div className="mb-4 text-emerald-400 text-center">Application created: {appId}</div>}
         
         <div className="mb-8">
           {renderCurrentStep()}
@@ -396,7 +543,8 @@ export default function CopyrightFillingProcess() {
           {currentStep < 6 ? (
             <button
               onClick={nextStep}
-              className="px-6 py-3 bg-emerald-500 text-white font-semibold rounded-lg hover:bg-emerald-600 transition-colors"
+              disabled={loading}
+              className={`px-6 py-3 bg-emerald-500 text-white font-semibold rounded-lg hover:bg-emerald-600 transition-colors ${loading ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               Next Step →
             </button>
