@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react"
-
 export default function IPRAdminDashboard() {
     const [contactRequests, setContactRequests] = useState([])
     const [activeTab, setActiveTab] = useState('contact')
@@ -7,7 +6,6 @@ export default function IPRAdminDashboard() {
     const [selectedConsultation, setSelectedConsultation] = useState(null)
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState(null)
-    
     // Consultation request state
     const [consultationRequests, setConsultationRequests] = useState([]);
     const [isLoadingConsultations, setIsLoadingConsultations] = useState(false);
