@@ -8,6 +8,8 @@ const PatentGuidePage = () => {
     phoneNumber: '',
     patentFilingNeeds: ''
   });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitMessage, setSubmitMessage] = useState(null);
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -19,8 +21,44 @@ const PatentGuidePage = () => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    console.log('Form submitted:', formData);
-    // Handle form submission here
+    setSubmitMessage(null);
+    // Basic client-side validation
+    if (!formData.fullName || !formData.emailAddress || !formData.patentFilingNeeds || formData.patentFilingNeeds.length < 10) {
+      setSubmitMessage({ type: 'error', text: 'Please fill required fields. Message must be at least 10 characters.' });
+      return;
+    }
+
+    const payload = {
+      fullName: formData.fullName,
+      email: formData.emailAddress,
+      phone: formData.phoneNumber || undefined,
+      company: undefined,
+      serviceType: 'patents',
+      message: formData.patentFilingNeeds
+    };
+
+    (async () => {
+      setSubmitting(true);
+      try {
+        const res = await fetch('http://localhost:3001/api/contact/contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+        if (res.ok) {
+          setSubmitMessage({ type: 'success', text: 'Request submitted — we will contact you shortly.' });
+          setFormData({ fullName: '', emailAddress: '', phoneNumber: '', patentFilingNeeds: '' });
+        } else {
+          const details = data.details && Array.isArray(data.details) ? data.details.join(', ') : data.error || data.message;
+          setSubmitMessage({ type: 'error', text: details || 'Submission failed' });
+        }
+      } catch (err) {
+        setSubmitMessage({ type: 'error', text: 'Network error: ' + (err.message || err) });
+      } finally {
+        setSubmitting(false);
+      }
+    })();
   };
 
   const processSteps = [
@@ -333,10 +371,14 @@ const PatentGuidePage = () => {
 
                   <button
                     onClick={handleSubmit}
-                    className="w-full bg-teal-500 hover:bg-teal-600 text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 text-lg"
+                    disabled={submitting}
+                    className={`w-full ${submitting ? 'opacity-60 cursor-not-allowed' : 'bg-teal-500 hover:bg-teal-600'} text-white font-semibold py-4 px-6 rounded-lg transition-colors duration-200 text-lg`}
                   >
-                    Get Free Consultation Call
+                    {submitting ? 'Submitting...' : 'Get Free Consultation Call'}
                   </button>
+                  {submitMessage && (
+                    <div className={`mt-3 text-center ${submitMessage.type === 'success' ? 'text-emerald-400' : 'text-red-400'}`}>{submitMessage.text}</div>
+                  )}
                   
                   <p className="text-sm text-slate-400 text-center">
                     By submitting this form, you agree to our terms and conditions.

@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const Patent = require('../models/Patent');
-const upload = require('../middleware/upload');
+const uploadUtils = require('../middleware/upload');
 const fs = require('fs');
 const path = require('path');
 
@@ -93,7 +93,7 @@ router.put('/:id', async (req, res) => {
 });
 
 // Upload technical drawings
-router.post('/:id/technical-drawings', upload.array('drawings', 10), async (req, res) => {
+router.post('/:id/technical-drawings', uploadUtils.upload.array('drawings', 10), async (req, res) => {
   try {
     const patent = await Patent.findById(req.params.id);
     if (!patent) {
@@ -145,7 +145,7 @@ router.post('/:id/technical-drawings', upload.array('drawings', 10), async (req,
 });
 
 // Upload supporting documents
-router.post('/:id/supporting-documents', upload.array('documents', 10), async (req, res) => {
+router.post('/:id/supporting-documents', uploadUtils.upload.array('documents', 10), async (req, res) => {
   try {
     const patent = await Patent.findById(req.params.id);
     if (!patent) {
@@ -334,5 +334,10 @@ router.get('/:id/download/:fileId', async (req, res) => {
     });
   }
 });
+
+
+// Multer error handling
+// Multer error handling - ensure this middleware is registered before exporting the router
+router.use(uploadUtils.handleMulterError);
 
 module.exports = router;
