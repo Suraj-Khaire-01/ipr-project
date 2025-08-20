@@ -3,7 +3,6 @@ const router = express.Router();
 const Contact = require('../models/Contact');
 const { body, validationResult } = require('express-validator');
 const rateLimit = require('express-rate-limit');
-
 // Rate limiting middleware for contact form
 const contactRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes

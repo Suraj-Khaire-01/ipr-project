@@ -24,11 +24,15 @@ function App() {
 
   // Hide Navbar & Footer on these routes
   const hideLayoutRoutes = ["/admin-dashboard", "/admindashboard"]
+  
+  // Hide only Footer on these routes
+  const hideFooterRoutes = ["/admin-dashboard", "/admindashboard", "/login"]
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       {/* Show Navbar only if not in hide list */}
       {!hideLayoutRoutes.includes(location.pathname) && <Navbar />}
+      
 
       {/* Page Routes */}
       <main className="flex-grow">
@@ -68,7 +72,7 @@ function App() {
       </main>
 
       {/* Show Footer only if not in hide list */}
-      {!hideLayoutRoutes.includes(location.pathname) && <Footer />}
+      {!hideFooterRoutes.includes(location.pathname) && <Footer />}
     </div>
   )
 }
