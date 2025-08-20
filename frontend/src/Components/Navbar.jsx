@@ -10,7 +10,7 @@ const services = [
   { name: "IP Litigation", href: "/iplitigationpage", icon: Gavel },
   { name: "separator", href: "", icon: null },
   { name: "Patent Filing Process", href: "/patentGuide", icon: FileText },
-  { name: "Copyright Filing Process", href: "/processes/copyright-filing", icon: Copyright },
+  { name: "Copyright Filing Process", href: "/copyrightGuide", icon: Copyright },
   { name: "Filing Requirements", href: "/requirements", icon: FileCheck },
 ]
 

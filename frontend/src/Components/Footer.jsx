@@ -42,7 +42,7 @@ export default function Footer() {
               <li><Link to="/industrialdesignservices" className="text-gray-400 hover:text-teal-400">Industrial Design</Link></li>
               <li><Link to="/iplitigationpage" className="text-gray-400 hover:text-teal-400">IP Litigation</Link></li>
               <li><Link to="/patentGuide" className="text-gray-400 hover:text-teal-400">Patent Filing Process</Link></li>
-              <li><Link to="/processes/copyright-filing" className="text-gray-400 hover:text-teal-400">Copyright Filing Process</Link></li>
+              <li><Link to="/copyrightGuide" className="text-gray-400 hover:text-teal-400">Copyright Filing Process</Link></li>
               <li><Link to="/requirements" className="text-gray-400 hover:text-teal-400">Filing Requirements</Link></li>
             </ul>
           </div>
