@@ -21,6 +21,7 @@ import Login from './login/login'
 import PatentGuidePage from './Guides/PatentGuidePage'
 import CopyrightGuidePage from './Guides/CopyrightGuidePage'
 
+
 function App() {
   const location = useLocation()
 
@@ -72,6 +73,9 @@ function App() {
           <Route path="/admindashboard" element={<AdminDashboard />} />
           <Route path="/patentGuide" element={<PatentGuidePage/>}/>
           <Route path="/copyrightGuide" element={<CopyrightGuidePage/>}/>
+          
+
+
         </Routes>
       </main>
 
