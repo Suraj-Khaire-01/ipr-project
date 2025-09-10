@@ -30,7 +30,7 @@ export default function IPRAdminDashboard() {
             setLoading(true)
             setError(null)
 
-            const response = await fetch('http://localhost:3001/api/contacts', {
+            const response = await fetch('/api/contacts', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
@@ -83,7 +83,7 @@ export default function IPRAdminDashboard() {
     const fetchConsultationRequests = async () => {
         setIsLoadingConsultations(true);
         try {
-            const response = await fetch('http://localhost:3001/api/consultations');
+            const response = await fetch('/api/consultations');
             const result = await response.json();
             
             if (result.success) {
