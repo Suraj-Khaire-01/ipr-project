@@ -54,7 +54,7 @@ const globalLimiter = rateLimit({
 });
 
 const consultationLimiter = rateLimit({
-  windowMs: 60 * 60, // 1 hour
+  windowMs: 60 * 60, //
   max: 5, // Limit each IP to 5 consultation submissions per hour
   message: {
     success: false,
