@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react"
+import AdminPatents from './AdminPatents'
 
 export default function IPRAdminDashboard() {
     const [contactRequests, setContactRequests] = useState([])
@@ -12,10 +13,44 @@ export default function IPRAdminDashboard() {
     const [consultationRequests, setConsultationRequests] = useState([]);
     const [isLoadingConsultations, setIsLoadingConsultations] = useState(false);
     const [showConsultationModal, setShowConsultationModal] = useState(false);
+    // Patent modal state moved to AdminPatents page
 
     // Fetch contact requests from database 
     useEffect(() => {
-        fetchContactRequests()
+        (async () => {
+            setLoading(true)
+            setError(null)
+            try {
+                const response = await fetch('/api/contacts', { headers: { 'Content-Type': 'application/json' } })
+                if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`)
+                const data = await response.json()
+                let contactsArray = [];
+                if (Array.isArray(data)) contactsArray = data;
+                else if (data.success && Array.isArray(data.data)) contactsArray = data.data;
+                else if (data.data && Array.isArray(data.data)) contactsArray = data.data;
+
+                // Use a minimal mapping to avoid referencing helper functions here (prevents hook lint warnings).
+                const transformedData = contactsArray.map(contact => ({
+                    id: contact._id,
+                    name: contact.fullName,
+                    email: contact.email,
+                    phone: contact.phone || 'Not provided',
+                    company: contact.company || 'Not specified',
+                    message: contact.message,
+                    submittedAt: contact.submittedAt,
+                    status: contact.status || 'pending',
+                    _id: contact._id,
+                    originalStatus: contact.status
+                }))
+
+                setContactRequests(transformedData)
+            } catch (error) {
+                console.error('Error fetching contact requests:', error)
+                setError(`Failed to fetch contact requests: ${error.message}`)
+            } finally {
+                setLoading(false)
+            }
+        })()
     }, [])
 
     // Fetch consultations when tab changes
@@ -99,6 +134,8 @@ export default function IPRAdminDashboard() {
             setIsLoadingConsultations(false);
         }
     };
+
+    // Patents are handled in the separate AdminPatents page component
 
     // Consultation handler functions
     const handleViewConsultation = (consultation) => {
@@ -699,8 +736,15 @@ export default function IPRAdminDashboard() {
                         </div>
                     )}
 
-                    {/* Other tabs content */}
-                    {activeTab !== 'contact' && activeTab !== 'consultation' && (
+                    {/* Patents tab (rendered from separate page component) */}
+                    {activeTab === 'patents' && (
+                        <div>
+                            <AdminPatents />
+                        </div>
+                    )}
+
+                    {/* Other tabs (fallback) */}
+                    {activeTab !== 'contact' && activeTab !== 'consultation' && activeTab !== 'patents' && (
                         <div className="bg-slate-800 rounded-lg shadow-lg border border-slate-700 p-8 text-center">
                             <div className="text-slate-600 text-6xl mb-4">🚧</div>
                             <h3 className="text-xl font-medium text-white mb-2">Coming Soon</h3>
@@ -831,6 +875,8 @@ export default function IPRAdminDashboard() {
                     </div>
                 </div>
             )}
+
+            {/* Patent details modal moved to AdminPatents page */}
         </div>
     )
 }

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FileText, Upload, BookOpen, Search, AlertCircle, Award, Phone, Mail } from 'lucide-react';
+import { AlertCircle, Award, BookOpen, FileText, Mail, Phone, Search, Upload } from 'lucide-react';
+import { useState } from 'react';
 
 const PatentGuidePage = () => {
   const [formData, setFormData] = useState({
