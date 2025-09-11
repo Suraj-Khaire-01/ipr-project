@@ -176,8 +176,8 @@ export default function ContactRequests() {
   };
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
+    <div className="p-6 mt-22 ml-65">
+      <div className="flex justify-between items-center mb-6 ">
         <h2 className="text-2xl font-bold text-white">Contact Requests</h2>
         <div className="flex space-x-2">
           <button

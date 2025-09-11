@@ -5,7 +5,7 @@ export default function Header() {
     };
   
     return (
-      <div className="bg-slate-800 shadow-lg border-b border-slate-700">
+      <div className="bg-slate-800 shadow-lg border-b border-slate-700 fixed w-full z-10">
         <div className="px-6 py-4 flex justify-between items-center">
           <div>
             <h1 className="text-3xl font-bold text-white">IPR Admin Dashboard</h1>

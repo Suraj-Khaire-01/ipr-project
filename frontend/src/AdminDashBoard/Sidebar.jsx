@@ -11,7 +11,7 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     ];
   
     return (
-      <div className="w-64 bg-slate-800 shadow-lg min-h-screen border-r border-slate-700">
+      <div className="w-64 bg-slate-800 shadow-lg min-h-screen border-r border-slate-700 fixed mt-22">
         <nav className="p-4">
           <ul className="space-y-2">
             {menuItems.map((item) => (

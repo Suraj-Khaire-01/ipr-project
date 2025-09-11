@@ -147,7 +147,7 @@ export default function Copyrights() {
   }
 
   return (
-    <div className="p-6">
+    <div className="p-6 mt-22 ml-65">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-2xl font-bold text-white">Copyright Applications</h2>
         <div className="flex space-x-2">
