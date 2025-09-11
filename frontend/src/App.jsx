@@ -32,7 +32,7 @@ function App() {
   const hideFooterRoutes = ["/admin-dashboard", "/admindashboard", "/login"]
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-50">
+    <div className="flex flex-col min-h-screen bg-gray-50 hide-scrollbar overflow-auto h-screen">
       {/* Show Navbar only if not in hide list */}
       {!hideLayoutRoutes.includes(location.pathname) && <Navbar />}
       
