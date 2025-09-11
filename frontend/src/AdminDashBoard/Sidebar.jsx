@@ -2,8 +2,8 @@ export default function Sidebar({ activeTab, setActiveTab }) {
     // You can remove the Link imports and onClick handlers since we're not using routing
     
     const menuItems = [
-      { id: 'contact', label: 'Contact Requests', icon: '📧', badge: 5 },
-      { id: 'consultation', label: 'Consultation Requests', icon: '💬', badge: 3 },
+      { id: 'contact', label: 'Contact Requests', icon: '📧'},
+      { id: 'consultation', label: 'Consultation Requests', icon: '💬'},
       { id: 'patents', label: 'Patent Applications', icon: '📜' },
       { id: 'trademarks', label: 'Trademark Registrations', icon: '®️' },
       { id: 'copyrights', label: 'Copyrights', icon: '©️' },
