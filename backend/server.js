@@ -83,6 +83,7 @@ app.use(cors({
   allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
+
 // Middleware
 app.use(globalLimiter);
 app.use(morgan('combined')); // Logging
