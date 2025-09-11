@@ -1,9 +1,35 @@
+import { useState } from "react";
+import AnalyticsSidebar from "../AdminAnalytics/AnalyticsSidebar";
+// import ContactAnalytics from "../AdminAnalytics/ContactAnalytics";
+// import PatentAnalytics from "../AdminAnalytics/PatentAnalytics";
+// import CopyrightAnalytics from "../AdminAnalytics/CopyrightAnalytics";
+// import TrademarksAnalytics from "../AdminAnalytics/TrademarksAnalytics";
+
 export default function Analytics() {
-    return (
-      <div className="bg-slate-800 rounded-lg shadow-lg border border-slate-700 p-8 text-center">
-        <div className="text-slate-600 text-6xl mb-4">📊</div>
-        <h3 className="text-xl font-medium text-white mb-2">Analytics Dashboard</h3>
-        <p className="text-slate-400">This section is under development</p>
-      </div>
-    );
-  }
+  const [activeService, setActiveService] = useState("contact");
+
+  const renderContent = () => {
+    switch (activeService) {
+      case "contact":
+        return <ContactAnalytics />;
+      case "patents":
+        return <PatentAnalytics />;
+      case "copyrights":
+        return <CopyrightAnalytics />;
+      case "trademarks":
+        return <TrademarksAnalytics />;
+      default:
+        return <div className="text-slate-400">Select a service to view analytics</div>;
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-900 flex">
+      {/* Sidebar for services */}
+      <AnalyticsSidebar activeService={activeService} setActiveService={setActiveService} />
+
+      {/* Main Content */}
+      <div className="flex-1 p-6 bg-gray-900">{renderContent()}</div>
+    </div>
+  );
+}
