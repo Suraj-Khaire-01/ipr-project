@@ -1,9 +1,9 @@
 import { useState } from "react";
 import AnalyticsSidebar from "../AdminAnalytics/AnalyticsSidebar";
-// import ContactAnalytics from "../AdminAnalytics/ContactAnalytics";
-// import PatentAnalytics from "../AdminAnalytics/PatentAnalytics";
-// import CopyrightAnalytics from "../AdminAnalytics/CopyrightAnalytics";
-// import TrademarksAnalytics from "../AdminAnalytics/TrademarksAnalytics";
+import ContactAnalytics from "../AdminAnalytics/ContactAnalytics";
+import PatentAnalytics from "../AdminAnalytics/PatentAnalytics";
+import CopyrightAnalytics from "../AdminAnalytics/CopyrightAnalytics";
+import TrademarksAnalytics from "../AdminAnalytics/TrademarksAnalytics";
 
 export default function Analytics() {
   const [activeService, setActiveService] = useState("contact");
