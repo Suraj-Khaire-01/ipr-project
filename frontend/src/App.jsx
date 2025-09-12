@@ -20,6 +20,7 @@ import IPLitigationPage from './Services/IPLitigationPage'
 import Login from './login/login'
 import PatentGuidePage from './Guides/PatentGuidePage'
 import CopyrightGuidePage from './Guides/CopyrightGuidePage'
+import CostEstimation from './Pages/CostEstimation'
 
 
 function App() {
@@ -73,7 +74,7 @@ function App() {
           <Route path="/admindashboard" element={<AdminDashboard />} />
           <Route path="/patentGuide" element={<PatentGuidePage/>}/>
           <Route path="/copyrightGuide" element={<CopyrightGuidePage/>}/>
-          
+          <Route path="/cost-estimation" element={<CostEstimation/>}/>
 
 
         </Routes>

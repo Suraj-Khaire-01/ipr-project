@@ -200,4 +200,58 @@ router.get('/:id/certificate', async (req, res) => {
   }
 });
 
+
+// @route   DELETE /api/copyrights/:id
+// @desc    Delete copyright application (Admin only)
+// @access  Private
+router.delete('/:id', async (req, res) => {
+  try {
+    // Find copyright by ID or application number
+    const copyright = await Copyright.findOne({
+      $or: [
+        { _id: req.params.id },
+        { applicationNumber: req.params.id }
+      ]
+    });
+
+    if (!copyright) {
+      return res.status(404).json({
+        success: false,
+        message: 'Copyright application not found'
+      });
+    }
+
+    // Delete associated files based on your schema
+    if (copyright.files && copyright.files.length > 0) {
+      copyright.files.forEach(file => {
+        try {
+          // Check if file exists before trying to delete
+          if (fs.existsSync(file.path)) {
+            fs.unlinkSync(file.path);
+            console.log(`Deleted file: ${file.path}`);
+          }
+        } catch (fileError) {
+          console.error(`Error deleting file ${file.path}:`, fileError);
+          // Continue with deletion even if file deletion fails
+        }
+      });
+    }
+
+    // Delete the copyright document
+    await Copyright.findByIdAndDelete(copyright._id);
+
+    res.json({
+      success: true,
+      message: 'Copyright application deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting copyright:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while deleting copyright'
+    });
+  }
+});
+
+
 module.exports = router;

@@ -12,6 +12,7 @@ const services = [
   { name: "Patent Filing Process", href: "/patentGuide", icon: FileText },
   { name: "Copyright Filing Process", href: "/copyrightGuide", icon: Copyright },
   { name: "Filing Requirements", href: "/requirements", icon: FileCheck },
+  { name: "Cost Estimation", href: "/cost-estimation", icon: Scale },
 ]
 
 export default function Navbar() {
