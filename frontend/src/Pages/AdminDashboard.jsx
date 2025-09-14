@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../AdminDashBoard/Sidebar";
 import Header from "../AdminDashBoard/Header";
 import ContactRequests from "../AdminDashBoard/ContactRequests";
@@ -10,6 +10,24 @@ import Analytics from "../AdminDashBoard/Analytics";
 
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('contact');
+  const [adminData, setAdminData] = useState(null);
+
+  useEffect(() => {
+    // Get admin data from localStorage/sessionStorage
+    const getAdminData = () => {
+      try {
+        const adminInfo = localStorage.getItem('adminInfo') || sessionStorage.getItem('adminInfo');
+        if (adminInfo) {
+          setAdminData(JSON.parse(adminInfo));
+        }
+        console.log('AdminDashboard mounted, admin authenticated');
+      } catch (error) {
+        console.error('Error parsing admin data:', error);
+      }
+    };
+
+    getAdminData();
+  }, []);
 
   // Render the appropriate component based on activeTab
   const renderContent = () => {
@@ -33,7 +51,7 @@ export default function AdminDashboard() {
 
   return (
     <div className="min-h-screen bg-gray-900">
-      <Header />
+      <Header adminData={adminData} />
       
       <div className="flex">
         <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />

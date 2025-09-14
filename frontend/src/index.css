@@ -1,10 +1,21 @@
 @import "tailwindcss";
 
-/* body {
-  @apply overflow-hidden;
-} */
+/* Ensure body and root allow scrolling */
+html, body, #root {
+  min-height: 100%;
+  height: auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;   
+  background-color: white;  
+}
 
-/* Hide scrollbar but allow scrolling */
+/* Enable dark mode background when Tailwind dark class is applied */
+body.dark {
+  background-color: #111827; /* Tailwind gray-900 */
+  color: #f9fafb; /* Tailwind gray-50 */
+}
+
+/* Hide scrollbar but keep scroll functionality */
 .hide-scrollbar::-webkit-scrollbar {
   display: none;
 }
@@ -13,6 +24,13 @@
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
 }
+
+
+/* Optional: force root container to allow children to expand */
+/* #root {
+  display: flex;
+  flex-direction: column;
+} */
 
 /* :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;

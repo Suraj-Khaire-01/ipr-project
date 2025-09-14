@@ -225,14 +225,14 @@ const Consultation = () => {
 
   return (
     <div
-      className={`min-h-screen transition-all duration-500 ${
+      className={`min-h-screen transition-all duration-500 overflow-y-auto ${
         isDark 
           ? 'bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900' 
           : 'bg-gradient-to-br from-gray-50 via-white to-gray-100'
       }`}
     >
       {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5">
+      <div className="absolute inset-0 opacity-5 pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: `radial-gradient(circle at 25px 25px, ${isDark ? '#ffffff' : '#000000'} 2px, transparent 0)`,
           backgroundSize: '50px 50px'
