@@ -61,6 +61,28 @@ const patentAPI = {
     });
     return response.json();
   },
+
+  createPaymentOrder: async (amount) => {
+    const response = await fetch(`${API_BASE_URL}/payment/order`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ amount }),
+    });
+    return response.json();
+  },
+
+  verifyPayment: async (paymentData) => {
+    const response = await fetch(`${API_BASE_URL}/payment/verify`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(paymentData),
+    });
+    return response.json();
+  },
 };
 
 const PatentFilingProcess = () => {
@@ -69,7 +91,9 @@ const PatentFilingProcess = () => {
     inventionTitle: '',
     inventorName: '',
     applicantName: '',
-    technicalDescription: ''
+    technicalDescription: '',
+    email: '',
+    phone: ''
   });
   const [technicalDrawings, setTechnicalDrawings] = useState([]);
   const [supportingDocuments, setSupportingDocuments] = useState([]);
@@ -78,6 +102,7 @@ const PatentFilingProcess = () => {
   const [patentId, setPatentId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [paymentCompleted, setPaymentCompleted] = useState(false);
 
   const steps = [
     { id: 1, title: 'Document\nPreparation', description: 'Gather required documents' },
@@ -157,6 +182,99 @@ const PatentFilingProcess = () => {
            formData.technicalDescription;
   };
 
+  // Razorpay Payment Handler
+  const handlePayment = async () => {
+    try {
+      setLoading(true);
+      setError('');
+
+      // Step 1: Create order on backend
+      const data = await patentAPI.createPaymentOrder(5000); // ₹5000 for patent filing
+     
+      if (!data.success) {
+        throw new Error(data.message || "Failed to create order");
+      }
+      const { order } = data;
+     
+      // Step 2: Initialize Razorpay Checkout
+      const options = {
+        key: data.key_id,
+        amount: order.amount.toString(),
+        currency: order.currency,
+        name: "IP Secure Legal",
+        description: "Patent Application Filing Fee",
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            // Step 3: Verify payment on backend
+            const verifyData = await patentAPI.verifyPayment({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            });
+           
+            if (verifyData.success) {
+              setPaymentCompleted(true);
+              alert("Payment successful! ✅");
+              
+              // Update step after payment
+              if (patentId) {
+                await patentAPI.updateStep(patentId, currentStep + 1);
+              }
+              setCurrentStep(currentStep + 1);
+            } else {
+              throw new Error("Payment verification failed");
+            }
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            setError("Error verifying payment. Please contact support.");
+          } finally {
+            setLoading(false);
+          }
+        },
+        prefill: {
+          name: formData.applicantName || "User",
+          email: formData.email || "user@example.com",
+          contact: formData.phone || "9999999999"
+        },
+        notes: {
+          application_type: "patent",
+          patent_id: patentId
+        },
+        theme: {
+          color: "#14b8a6"
+        },
+        modal: {
+          ondismiss: function() {
+            console.log("Payment cancelled by user");
+            setLoading(false);
+          }
+        }
+      };
+      
+      // Check if Razorpay script is loaded
+      if (!window.Razorpay) {
+        throw new Error("Razorpay SDK not loaded. Please refresh the page.");
+      }
+      
+      const rzp = new window.Razorpay(options);
+     
+      // Handle payment failures
+      rzp.on('payment.failed', function (response) {
+        console.error("Payment failed:", response.error);
+        setError(`Payment failed: ${response.error.description}`);
+        setLoading(false);
+      });
+     
+      rzp.open();
+     
+    } catch (err) {
+      console.error("Payment initialization error:", err);
+      setError(err.message || "Payment initialization failed");
+      setLoading(false);
+    }
+  };
+
   const nextStep = async () => {
     if (currentStep === 1 && !isFormValid()) {
       setError('Please fill all required fields');
@@ -174,6 +292,8 @@ const PatentFilingProcess = () => {
           inventorName: formData.inventorName,
           applicantName: formData.applicantName,
           technicalDescription: formData.technicalDescription,
+          email: formData.email,
+          phone: formData.phone,
           completedDocuments: completedDocuments,
           currentStep: 2
         };
@@ -402,6 +522,35 @@ const PatentFilingProcess = () => {
                   />
                 </div>
 
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-200">
+                      Email Address
+                    </label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="your.email@example.com"
+                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-semibold mb-2 text-gray-200">
+                      Phone Number
+                    </label>
+                    <input
+                      type="tel"
+                      name="phone"
+                      value={formData.phone}
+                      onChange={handleInputChange}
+                      placeholder="9999999999"
+                      className="w-full px-4 py-3 bg-gray-700/50 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:border-teal-500 focus:ring-2 focus:ring-teal-500/20 transition-all"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-semibold mb-2 text-gray-200">
                     Technical Description <span className="text-red-400">*</span>
@@ -524,8 +673,87 @@ const PatentFilingProcess = () => {
             </div>
           )}
 
+          {/* Step 3 - Payment */}
+          {currentStep === 3 && (
+            <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
+              <div className="text-center mb-8">
+                <div className="w-20 h-20 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                  <Shield className="w-10 h-10 text-teal-400" />
+                </div>
+                <h3 className="text-2xl font-bold mb-4">Patent Filing Fee Payment</h3>
+                <p className="text-gray-300 mb-6">
+                  Complete the payment to proceed with your patent application submission
+                </p>
+              </div>
+
+              <div className="max-w-md mx-auto">
+                {/* Fee Breakdown */}
+                <div className="bg-gray-700/50 rounded-xl p-6 mb-6">
+                  <h4 className="text-lg font-semibold mb-4 text-white">Fee Breakdown</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between text-gray-300">
+                      <span>Application Filing Fee</span>
+                      <span>₹4,000</span>
+                    </div>
+                    <div className="flex justify-between text-gray-300">
+                      <span>Processing Fee</span>
+                      <span>₹800</span>
+                    </div>
+                    <div className="flex justify-between text-gray-300">
+                      <span>Service Charges</span>
+                      <span>₹200</span>
+                    </div>
+                    <div className="border-t border-gray-600 pt-3 mt-3">
+                      <div className="flex justify-between text-white font-bold text-lg">
+                        <span>Total Amount</span>
+                        <span>₹5,000</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Payment Button */}
+                {!paymentCompleted ? (
+                  <button
+                    onClick={handlePayment}
+                    disabled={loading}
+                    className={`w-full py-4 rounded-xl font-semibold transition-all duration-200 ${
+                      loading
+                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:scale-105 shadow-lg'
+                    }`}
+                  >
+                    {loading ? (
+                      <div className="flex items-center justify-center">
+                        <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Processing Payment...
+                      </div>
+                    ) : (
+                      <>Pay ₹5,000 with Razorpay</>
+                    )}
+                  </button>
+                ) : (
+                  <div className="bg-teal-500/20 border border-teal-500 rounded-xl p-4 text-center">
+                    <Check className="w-8 h-8 text-teal-400 mx-auto mb-2" />
+                    <p className="text-teal-200 font-semibold">Payment Completed Successfully!</p>
+                  </div>
+                )}
+
+                {/* Payment Info */}
+                <div className="mt-6 p-4 bg-blue-900/30 border border-blue-700/50 rounded-lg">
+                  <p className="text-sm text-blue-200 text-center">
+                    🔒 Secure payment powered by Razorpay. All major payment methods accepted.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Other Steps Preview */}
-          {currentStep > 1 && (
+          {currentStep > 1 && currentStep !== 3 && (
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center">
               <div className="w-20 h-20 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Shield className="w-10 h-10 text-teal-400" />
@@ -535,7 +763,6 @@ const PatentFilingProcess = () => {
               </h3>
               <p className="text-gray-300 mb-6 max-w-2xl mx-auto">
                 {currentStep === 2 && "Your application will be submitted to the patent office for initial review and processing."}
-                {currentStep === 3 && "The patent office will review your application and process the required fees."}
                 {currentStep === 4 && "A comprehensive search will be conducted to compare your invention with existing prior art."}
                 {currentStep === 5 && "Your patent application will be published for public review after 18 months."}
                 {currentStep === 6 && "A detailed examination of your invention's patentability will be conducted."}
@@ -564,10 +791,10 @@ const PatentFilingProcess = () => {
             
             {currentStep < 7 && (
               <button
-                onClick={nextStep}
-                disabled={(currentStep === 1 && !isFormValid()) || loading}
+                onClick={currentStep === 3 && !paymentCompleted ? handlePayment : nextStep}
+                disabled={(currentStep === 1 && !isFormValid()) || loading || (currentStep === 3 && !paymentCompleted)}
                 className={`inline-flex items-center px-8 py-3 rounded-xl font-semibold transition-all duration-200 ${
-                  ((currentStep === 1 && isFormValid()) || currentStep > 1) && !loading
+                  ((currentStep === 1 && isFormValid()) || (currentStep > 1 && (currentStep !== 3 || paymentCompleted))) && !loading
                     ? 'bg-gradient-to-r from-teal-500 to-cyan-500 text-white hover:scale-105 shadow-lg'
                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                 }`}
@@ -578,11 +805,11 @@ const PatentFilingProcess = () => {
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                       <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
-                    Saving...
+                    {currentStep === 3 ? 'Processing Payment...' : 'Saving...'}
                   </>
                 ) : (
                   <>
-                    Next Step
+                    {currentStep === 3 && !paymentCompleted ? 'Proceed to Payment' : 'Next Step'}
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </>
                 )}

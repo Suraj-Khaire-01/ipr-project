@@ -47,20 +47,20 @@ export default function Navbar() {
   // Hide navbar on dashboard and admin-dashboard pages
   if (location.pathname === "/dashboard" || location.pathname === "/admin-dashboard") return null;
 
-  useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
-    window.addEventListener("scroll", handleScroll);
+  // useEffect(() => {
+  //   const handleScroll = () => setScrolled(window.scrollY > 20);
+  //   window.addEventListener("scroll", handleScroll);
 
-    // Apply theme on mount and when theme changes
-    if (theme === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-    localStorage.setItem("theme", theme);
+  //   // Apply theme on mount and when theme changes
+  //   if (theme === "dark") {
+  //     document.documentElement.classList.add("dark");
+  //   } else {
+  //     document.documentElement.classList.remove("dark");
+  //   }
+  //   localStorage.setItem("theme", theme);
 
-    return () => window.removeEventListener("scroll", handleScroll);
-  }, [theme]);
+  //   return () => window.removeEventListener("scroll", handleScroll);
+  // }, [theme]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {

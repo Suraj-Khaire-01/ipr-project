@@ -14,6 +14,8 @@ const copyrightRoutes = require('./routes/copyright');
 const contactRoutes = require('./routes/contact');
 const patentRoutes = require('./routes/patents');
 const consultationRoutes = require('./routes/consultations');
+const paymentRoutes = require('./routes/paymentRoutes');
+
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -129,6 +131,7 @@ app.use('/api/copyright', copyrightRoutes);
 app.use('/api', contactRoutes);
 app.use('/api/patents', patentRoutes);
 app.use('/api/consultations', consultationLimiter, consultationRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Multer error handling middleware
 app.use((error, req, res, next) => {

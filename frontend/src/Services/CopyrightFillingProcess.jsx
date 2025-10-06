@@ -306,6 +306,97 @@ export default function CopyrightFillingProcess() {
     </div>
   );
 
+  // --- Razorpay Payment Handler ---
+const handlePayment = async () => {
+  try {
+    // Step 1: Create order on backend
+    const res = await fetch(`${API_BASE}/payment/order`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: 1000 }) // ₹1000 in rupees (backend will convert to paise)
+    });
+
+    const data = await res.json();
+    
+    if (!data.success || !res.ok) {
+      throw new Error(data.message || "Failed to create order");
+    }
+
+    const { order } = data; // Backend sends { success, order, key_id }
+    
+    // Step 2: Initialize Razorpay Checkout
+    const options = {
+      key: data.key_id, // Use key_id from backend response
+      amount: order.amount.toString(),
+      currency: order.currency,
+      name: "IP Secure Legal",
+      description: "Copyright Application Payment",
+      order_id: order.id,
+      handler: async function (response) {
+        try {
+          // Step 3: Verify payment on backend
+          const verifyRes = await fetch(`${API_BASE}/payment/verify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature
+            })
+          });
+
+          const verifyData = await verifyRes.json();
+          
+          if (verifyData.success) {
+            alert("Payment successful! ✅");
+            setCurrentStep(5); // Go to next step after successful payment
+          } else {
+            alert("Payment verification failed! ❌");
+          }
+        } catch (error) {
+          console.error("Payment verification error:", error);
+          alert("Error verifying payment. Please contact support.");
+        }
+      },
+      prefill: {
+        name: formData.applicantName || "User",
+        email: formData.email || "user@example.com",
+        contact: formData.phone || "9999999999"
+      },
+      notes: {
+        application_type: "copyright"
+      },
+      theme: { 
+        color: "#10b981" 
+      },
+      modal: {
+        ondismiss: function() {
+          console.log("Payment cancelled by user");
+        }
+      }
+    };
+
+    // Check if Razorpay script is loaded
+    if (!window.Razorpay) {
+      throw new Error("Razorpay SDK not loaded. Please refresh the page.");
+    }
+
+    const rzp = new window.Razorpay(options);
+    
+    // Handle payment failures
+    rzp.on('payment.failed', function (response) {
+      console.error("Payment failed:", response.error);
+      alert(`Payment failed: ${response.error.description}`);
+    });
+    
+    rzp.open();
+    
+  } catch (err) {
+    console.error("Payment initialization error:", err);
+    alert(err.message || "Payment initialization failed");
+  }
+};
+
   
 
   const UploadWorkStep = () => (
@@ -441,9 +532,13 @@ export default function CopyrightFillingProcess() {
           </div>
         </div>
         
-        <button className="w-full mt-6 py-3 bg-emerald-500 text-white font-semibold rounded-lg hover:bg-emerald-600 transition-colors">
+        <button
+          onClick={handlePayment}
+          className="w-full mt-6 py-3 bg-emerald-500 text-white font-semibold rounded-lg hover:bg-emerald-600 transition-colors"
+        >
           Proceed to Payment
         </button>
+
       </div>
     </div>
   );
