@@ -13,6 +13,10 @@ const documentSchema = new mongoose.Schema({
 });
 
 const patentSchema = new mongoose.Schema({
+  clerkUserId: {
+    type: String,
+    required: true
+  },
   inventionTitle: {
     type: String,
     required: true

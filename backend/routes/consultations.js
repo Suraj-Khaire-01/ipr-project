@@ -65,11 +65,12 @@ router.post('/', upload.array('files', 10), async (req, res) => {
       preferredDate,
       preferredTime,
       marketingConsent,
-      communicationPreference
+      communicationPreference,
+      clerkUserId // ← ADDED: Clerk user ID
     } = req.body;
 
     // Validate required fields
-    if (!fullName || !email || !phone || !workType || !description || !consultationType || !preferredDate || !preferredTime) {
+    if (!fullName || !email || !phone || !workType || !description || !consultationType || !preferredDate || !preferredTime || !clerkUserId) {
       // Delete uploaded files if validation fails
       if (req.files && req.files.length > 0) {
         req.files.forEach(file => {
@@ -90,7 +91,8 @@ router.post('/', upload.array('files', 10), async (req, res) => {
           description: !description ? 'Description is required' : null,
           consultationType: !consultationType ? 'Consultation type is required' : null,
           preferredDate: !preferredDate ? 'Preferred date is required' : null,
-          preferredTime: !preferredTime ? 'Preferred time is required' : null
+          preferredTime: !preferredTime ? 'Preferred time is required' : null,
+          clerkUserId: !clerkUserId ? 'User authentication required' : null // ← ADDED: Clerk ID validation
         }
       });
     }
@@ -114,6 +116,7 @@ router.post('/', upload.array('files', 10), async (req, res) => {
 
     // Create consultation object
     const consultationData = {
+      clerkUserId: clerkUserId, // ← ADDED: Clerk user ID
       fullName: fullName.trim(),
       email: email.toLowerCase().trim(),
       phone: phone.trim(),
@@ -217,6 +220,128 @@ router.post('/', upload.array('files', 10), async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Server error occurred while processing your request'
+    });
+  }
+});
+
+// @route   GET /api/consultations/user/:clerkUserId
+// @desc    Get consultations for specific user
+// @access  Private
+router.get('/user/:clerkUserId', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const consultations = await Consultation.find({ 
+      clerkUserId: req.params.clerkUserId 
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .select('-uploadedFiles -userAgent -ipAddress'); // Exclude sensitive data
+
+    const total = await Consultation.countDocuments({ 
+      clerkUserId: req.params.clerkUserId 
+    });
+
+    res.json({
+      success: true,
+      data: consultations,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user consultations:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while fetching consultations'
+    });
+  }
+});
+
+// @route   GET /api/consultations/user/:clerkUserId/count
+// @desc    Get consultation count for user
+// @access  Private
+router.get('/user/:clerkUserId/count', async (req, res) => {
+  try {
+    const total = await Consultation.countDocuments({ 
+      clerkUserId: req.params.clerkUserId 
+    });
+
+    // Count by status
+    const pending = await Consultation.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'pending'
+    });
+    
+    const confirmed = await Consultation.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'confirmed'
+    });
+    
+    const completed = await Consultation.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'completed'
+    });
+
+    const cancelled = await Consultation.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'cancelled'
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total,
+        pending,
+        confirmed,
+        completed,
+        cancelled
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching consultation count:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while fetching consultation count'
+    });
+  }
+});
+
+// @route   GET /api/consultations/user/:clerkUserId/:consultationId
+// @desc    Get specific consultation details for user
+// @access  Private
+router.get('/user/:clerkUserId/:consultationId', async (req, res) => {
+  try {
+    const consultation = await Consultation.findOne({
+      clerkUserId: req.params.clerkUserId,
+      $or: [
+        { _id: req.params.consultationId },
+        { consultationId: req.params.consultationId }
+      ]
+    });
+
+    if (!consultation) {
+      return res.status(404).json({
+        success: false,
+        message: 'Consultation not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: consultation
+    });
+  } catch (error) {
+    console.error('Error fetching consultation details:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while fetching consultation details'
     });
   }
 });

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useUser } from "@clerk/clerk-react"; // ADD THIS IMPORT
 import {
   ChevronDown,
   Upload,
@@ -21,6 +22,7 @@ import {
 } from 'lucide-react';
 
 const Consultation = () => {
+  const { user } = useUser(); // ADD THIS LINE
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState(null);
@@ -101,13 +103,21 @@ const Consultation = () => {
     setSubmitError(null);
 
     try {
+      // Check if user is authenticated
+      if (!user) {
+        throw new Error('Please sign in to submit a consultation');
+      }
+
       // Create FormData for file upload
       const submitData = new FormData();
       
-      // Append form fields
+      // Append form fields including clerkUserId
       Object.keys(formData).forEach(key => {
         submitData.append(key, formData[key]);
       });
+
+      // ADD THIS LINE: Append Clerk User ID
+      submitData.append('clerkUserId', user.id);
 
       // Append files
       uploadedFiles.forEach(file => {

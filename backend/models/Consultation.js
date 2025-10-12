@@ -1,6 +1,10 @@
 const mongoose = require('mongoose');
 
 const consultationSchema = new mongoose.Schema({
+  clerkUserId: {
+    type: String,
+    required: true
+  },
   consultationId: {
     type: String,
     unique: true,

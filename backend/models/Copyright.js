@@ -13,6 +13,10 @@ const documentSchema = new mongoose.Schema({
 });
 
 const copyrightSchema = new mongoose.Schema({
+  clerkUserId: {
+    type: String,
+    required: true
+  },
   title: {
     type: String,
     required: true
