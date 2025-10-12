@@ -6,7 +6,9 @@ import {
   ArrowLeft,
   Check,
   User,
-  Shield
+  Shield,
+  Download,
+  Info  // Fixed: Changed from 'nfo' to 'Info'
 } from 'lucide-react';
 
 // API service functions
@@ -83,6 +85,18 @@ const patentAPI = {
     });
     return response.json();
   },
+};
+
+const downloadSampleDocument = () => {
+  // Replace with your actual Copyright Format file URL
+  const sampleDocUrl = 'Patent Format.docx';
+  
+  const link = document.createElement('a');
+  link.href = sampleDocUrl;
+  link.download = 'Patent_Format_Sample.docx';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
 };
 
 const PatentFilingProcess = () => {
@@ -567,108 +581,134 @@ const PatentFilingProcess = () => {
 
                 {/* File Upload Areas */}
                 <div className="grid md:grid-cols-2 gap-6">
-                  {/* Technical Drawings */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-3 text-gray-200">
-                      Upload Technical Drawings
-                    </label>
-                    <div
-                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
-                        dragOver.technical
-                          ? 'border-teal-400 bg-teal-400/10'
-                          : 'border-gray-600 hover:border-teal-500'
-                      }`}
-                      onDragOver={(e) => handleDragOver(e, 'technical')}
-                      onDragLeave={(e) => handleDragLeave(e, 'technical')}
-                      onDrop={(e) => handleDrop(e, 'technical')}
-                    >
-                      <Upload className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-300 mb-3">
-                        Drag & drop files here or click to browse
-                      </p>
-                      <input
-                        type="file"
-                        multiple
-                        accept=".pdf,.jpg,.jpeg,.png,.dwg"
-                        onChange={(e) => handleFileSelect(e, 'technical')}
-                        className="hidden"
-                        id="technical-upload"
-                      />
-                      <label
-                        htmlFor="technical-upload"
-                        className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors cursor-pointer"
-                      >
-                        Choose Files
-                      </label>
-                    </div>
-                    {technicalDrawings.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {technicalDrawings.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
-                            <span className="text-sm text-gray-300">{file.name}</span>
-                            <button
-                              onClick={() => removeFile(index, 'technical')}
-                              className="text-red-400 hover:text-red-300 text-sm"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+  {/* Technical Drawings */}
+  <div className="flex flex-col">
+    <label className="block text-sm font-semibold mb-3 text-gray-200">
+      Upload Technical Drawings
+    </label>
+    <div
+      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 flex-1 ${
+        dragOver.technical
+          ? 'border-teal-400 bg-teal-400/10'
+          : 'border-gray-600 hover:border-teal-500'
+      }`}
+      onDragOver={(e) => handleDragOver(e, 'technical')}
+      onDragLeave={(e) => handleDragLeave(e, 'technical')}
+      onDrop={(e) => handleDrop(e, 'technical')}
+    >
+      <Upload className="w-8 h-14 text-gray-400 mx-auto mb-3" />
+      <p className="text-sm text-gray-300 mb-3">
+        Drag & drop files here or click to browse
+      </p>
+      <p className="text-xs text-gray-400 mb-3">
+        You can upload your work file which describes about your work
+      </p>
+      <input
+        type="file"
+        multiple
+        accept=".pdf,.jpg,.jpeg,.png,.dwg"
+        onChange={(e) => handleFileSelect(e, 'technical')}
+        className="hidden"
+        id="technical-upload"
+      />
+      <label
+        htmlFor="technical-upload"
+        className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors cursor-pointer"
+      >
+        Choose Files
+      </label>
+    </div>
+    {technicalDrawings.length > 0 && (
+      <div className="mt-3 space-y-2">
+        {technicalDrawings.map((file, index) => (
+          <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
+            <span className="text-sm text-gray-300">{file.name}</span>
+            <button
+              onClick={() => removeFile(index, 'technical')}
+              className="text-red-400 hover:text-red-300 text-sm"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
 
-                  {/* Supporting Documents */}
-                  <div>
-                    <label className="block text-sm font-semibold mb-3 text-gray-200">
-                      Upload Supporting Documents
-                    </label>
-                    <div
-                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 ${
-                        dragOver.supporting
-                          ? 'border-teal-400 bg-teal-400/10'
-                          : 'border-gray-600 hover:border-teal-500'
-                      }`}
-                      onDragOver={(e) => handleDragOver(e, 'supporting')}
-                      onDragLeave={(e) => handleDragLeave(e, 'supporting')}
-                      onDrop={(e) => handleDrop(e, 'supporting')}
-                    >
-                      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-                      <p className="text-sm text-gray-300 mb-3">
-                        Drag & drop files here or click to browse
-                      </p>
-                      <input
-                        type="file"
-                        multiple
-                        accept=".pdf,.doc,.docx"
-                        onChange={(e) => handleFileSelect(e, 'supporting')}
-                        className="hidden"
-                        id="supporting-upload"
-                      />
-                      <label
-                        htmlFor="supporting-upload"
-                        className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors cursor-pointer"
-                      >
-                        Choose Files
-                      </label>
-                    </div>
-                    {supportingDocuments.length > 0 && (
-                      <div className="mt-3 space-y-2">
-                        {supportingDocuments.map((file, index) => (
-                          <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
-                            <span className="text-sm text-gray-300">{file.name}</span>
-                            <button
-                              onClick={() => removeFile(index, 'supporting')}
-                              className="text-red-400 hover:text-red-300 text-sm"
-                            >
-                              Remove
-                            </button>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                </div>
+  {/* Supporting Documents */}
+  <div className="flex flex-col">
+    <div className="flex items-center justify-between mb-3">
+      <label className="block text-sm font-semibold text-gray-200">
+        Upload Supporting Documents
+      </label>
+      {/* Sample Document Download Button */}
+      <button 
+        onClick={() => downloadSampleDocument()}
+        className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+      >
+        <Download className="w-4 h-4" />
+        Download Patent Format
+      </button>
+    </div>
+
+    <div
+      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 flex-1 ${
+        dragOver.supporting
+          ? 'border-teal-400 bg-teal-400/10'
+          : 'border-gray-600 hover:border-teal-500'
+      }`}
+      onDragOver={(e) => handleDragOver(e, 'supporting')}
+      onDragLeave={(e) => handleDragLeave(e, 'supporting')}
+      onDrop={(e) => handleDrop(e, 'supporting')}
+    >
+      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+      <p className="text-sm text-gray-300 mb-3">
+        Drag & drop files here or click to browse
+      </p>
+      <p className="text-xs text-gray-400 mb-3">
+        You can upload your work file which describes about your work
+      </p>
+      <input
+        type="file"
+        multiple
+        accept=".pdf,.doc,.docx"
+        onChange={(e) => handleFileSelect(e, 'supporting')}
+        className="hidden"
+        id="supporting-upload"
+      />
+      <label
+        htmlFor="supporting-upload"
+        className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors cursor-pointer"
+      >
+        Choose Files
+      </label>
+    </div>
+
+    {/* Sample Document Info */}
+    <div className="mt-3 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+      <p className="text-xs text-blue-300 flex items-center gap-2">
+        <Info className="w-4 h-4" />
+        Download the Patent Format sample above and upload your documents in the same format
+      </p>
+    </div>
+
+    {supportingDocuments.length > 0 && (
+      <div className="mt-3 space-y-2">
+        {supportingDocuments.map((file, index) => (
+          <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
+            <span className="text-sm text-gray-300">{file.name}</span>
+            <button
+              onClick={() => removeFile(index, 'supporting')}
+              className="text-red-400 hover:text-red-300 text-sm"
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</div>
               </div>
             </div>
           )}

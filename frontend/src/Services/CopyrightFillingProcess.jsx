@@ -1,4 +1,4 @@
-import { Award, CheckCircle, Search, Upload } from 'lucide-react';
+import { Award, CheckCircle, Search, Upload, Download, Info } from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
 
 // Top-level memoized WorkDetails component to avoid remounting issues
@@ -153,6 +153,18 @@ export default function CopyrightFillingProcess() {
     const files = e.target.files ? Array.from(e.target.files) : [];
     const names = files.map(f => f.name);
     setFormData(prev => ({ ...prev, supportingFilesNames: names, supportingFiles: files }));
+  };
+
+  // Sample Document Download Function
+  const downloadSampleDocument = () => {
+    const sampleDocUrl = '/samples/copyright-format-sample.docx';
+    
+    const link = document.createElement('a');
+    link.href = sampleDocUrl;
+    link.download = 'Copyright_Format_Sample.docx';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
   // --- New: API wiring state and helpers ---
@@ -397,8 +409,6 @@ const handlePayment = async () => {
   }
 };
 
-  
-
   const UploadWorkStep = () => (
     <div className="bg-gray-800 rounded-lg p-8">
       <div className="mb-6">
@@ -425,6 +435,18 @@ const handlePayment = async () => {
           <Upload className="w-12 h-12 text-gray-400 mx-auto mb-4" />
           <h3 className="text-lg font-semibold text-white mb-2">Supporting Documents</h3>
           <p className="text-gray-400 mb-4">Additional files, drafts, or related materials</p>
+          
+          {/* Sample Document Download Button */}
+          <div className="mb-4">
+            <button 
+              onClick={downloadSampleDocument}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors mx-auto"
+            >
+              <Download className="w-4 h-4" />
+              Download Copyright Format Sample
+            </button>
+          </div>
+          
           <input ref={supportingInputRef} type="file" name="documents" multiple className="hidden" onChange={handleSupportingSelect} />
           <button onClick={() => supportingInputRef.current && supportingInputRef.current.click()} className="px-6 py-2 bg-gray-700 text-white rounded-lg hover:bg-gray-600 transition-colors">
             Choose Files
@@ -433,6 +455,14 @@ const handlePayment = async () => {
             <div className="mt-2 text-sm text-gray-300">Selected: {formData.supportingFilesNames.join(', ')}</div>
           )}
         </div>
+      </div>
+
+      {/* Sample Document Info */}
+      <div className="mb-6 p-4 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+        <p className="text-sm text-blue-300 flex items-center gap-2 justify-center">
+          <Info className="w-4 h-4" />
+          Download the Copyright Format sample above and upload your documents in the same format
+        </p>
       </div>
       
       <div className="bg-orange-900/30 border border-orange-500/50 rounded-lg p-4">
