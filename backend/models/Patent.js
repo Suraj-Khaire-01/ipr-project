@@ -33,6 +33,13 @@ const patentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  // ADD THESE MISSING FIELDS:
+  email: {
+    type: String
+  },
+  phone: {
+    type: String
+  },
   technicalDrawings: [documentSchema],
   supportingDocuments: [documentSchema],
   currentStep: {
@@ -52,12 +59,15 @@ const patentSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
+  // FIX: Change from String to Number to match frontend
   completedDocuments: [{
-    type: String
+    type: Number  // Changed from String to Number
   }],
+  // Make createdBy optional like Copyright model
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
-    ref: 'User'
+    ref: 'User',
+    required: false  // Make it optional
   }
 }, {
   timestamps: true

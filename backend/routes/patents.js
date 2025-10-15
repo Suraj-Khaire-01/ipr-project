@@ -45,17 +45,83 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Create new patent application
+// Create new patent application - SIMPLIFIED LIKE COPYRIGHT
 router.post('/', async (req, res) => {
   try {
-    const patent = new Patent(req.body);
+    const payload = req.body;
+    console.log('[patent] POST / - payload:', JSON.stringify(payload));
+    
+    // Basic validation: ensure required fields exist (like Copyright route)
+    if (!payload.inventionTitle) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invention title is required' 
+      });
+    }
+
+    // Create patent directly from payload (like Copyright route)
+    const patent = new Patent(payload);
     const savedPatent = await patent.save();
+    
+    console.log('[patent] created id:', savedPatent._id);
+    
     res.status(201).json({
       success: true,
       message: 'Patent application created successfully',
       data: savedPatent
     });
   } catch (error) {
+    console.error('[patent] POST / error:', error);
+    
+    // Enhanced error handling
+    if (error.name === 'ValidationError') {
+      const errors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors
+      });
+    }
+    
+    res.status(400).json({
+      success: false,
+      error: 'Failed to create patent',
+      details: error.message
+    });
+  }
+});
+
+// Alternative route for testing without clerkUserId
+router.post('/test', async (req, res) => {
+  try {
+    const payload = req.body;
+    console.log('[patent] POST /test - payload:', JSON.stringify(payload));
+    
+    if (!payload.inventionTitle) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invention title is required' 
+      });
+    }
+
+    // Auto-add clerkUserId for testing if not provided
+    const patentData = {
+      ...payload,
+      clerkUserId: payload.clerkUserId || 'temp_user_' + Date.now()
+    };
+
+    const patent = new Patent(patentData);
+    const savedPatent = await patent.save();
+    
+    console.log('[patent] created id:', savedPatent._id);
+    
+    res.status(201).json({
+      success: true,
+      message: 'Patent application created successfully',
+      data: savedPatent
+    });
+  } catch (error) {
+    console.error('[patent] POST /test error:', error);
     res.status(400).json({
       success: false,
       error: 'Failed to create patent',
@@ -199,7 +265,7 @@ router.post('/:id/supporting-documents', uploadUtils.upload.array('documents', 1
 // Update completed documents
 router.patch('/:id/completed-documents', async (req, res) => {
   try {
-    const { documentId, completed } = req.body;
+    const { documentIds } = req.body; // Accept array of document IDs
     const patent = await Patent.findById(req.params.id);
     
     if (!patent) {
@@ -209,15 +275,9 @@ router.patch('/:id/completed-documents', async (req, res) => {
       });
     }
 
-    if (completed) {
-      if (!patent.completedDocuments.includes(documentId)) {
-        patent.completedDocuments.push(documentId);
-      }
-    } else {
-      patent.completedDocuments = patent.completedDocuments.filter(id => id !== documentId);
-    }
-
+    patent.completedDocuments = documentIds || [];
     await patent.save();
+
     res.json({
       success: true,
       message: 'Completed documents updated successfully',
@@ -309,7 +369,7 @@ router.get('/:id/download/:fileId', async (req, res) => {
 
     // Find file in both technical drawings and supporting documents
     const file = [...patent.technicalDrawings, ...patent.supportingDocuments]
-      .find(f => f._id.toString() === req.params.fileId);
+      .find(f => f._id && f._id.toString() === req.params.fileId);
 
     if (!file) {
       return res.status(404).json({
@@ -335,9 +395,7 @@ router.get('/:id/download/:fileId', async (req, res) => {
   }
 });
 
-
 // Multer error handling
-// Multer error handling - ensure this middleware is registered before exporting the router
 router.use(uploadUtils.handleMulterError);
 
 module.exports = router;
