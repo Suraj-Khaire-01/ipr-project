@@ -15,7 +15,8 @@ const documentSchema = new mongoose.Schema({
 const copyrightSchema = new mongoose.Schema({
   clerkUserId: {
     type: String,
-    required: true
+    required: true,
+    index: true // Add index for better query performance
   },
   title: {
     type: String,
