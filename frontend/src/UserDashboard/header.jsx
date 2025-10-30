@@ -7,6 +7,7 @@ export default function DashboardHeader({ user, fetchUserData }) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
 
+  
   // Update time every minute
   useEffect(() => {
     const timer = setInterval(() => {

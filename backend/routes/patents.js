@@ -144,6 +144,28 @@ router.post('/:id/technical-drawings', uploadUtils.upload.array('drawings', 10),
   }
 });
 
+// In your patents.js route file
+router.get('/', async (req, res) => {
+  try {
+    // Get clerkUserId from query params or headers
+    const { clerkUserId } = req.query;
+    
+    const filter = clerkUserId ? { clerkUserId } : {};
+    const patents = await Patent.find(filter).sort({ createdAt: -1 });
+    
+    res.json({
+      success: true,
+      data: patents
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch patents',
+      details: error.message
+    });
+  }
+});
+
 // Upload supporting documents
 router.post('/:id/supporting-documents', uploadUtils.upload.array('documents', 10), async (req, res) => {
   try {
