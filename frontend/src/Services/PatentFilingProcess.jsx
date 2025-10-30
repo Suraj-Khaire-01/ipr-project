@@ -8,22 +8,40 @@ import {
   User,
   Shield,
   Download,
-  Info  // Fixed: Changed from 'nfo' to 'Info'
+  Info
 } from 'lucide-react';
+import { useUser } from '@clerk/clerk-react';
 
 // API service functions
 const API_BASE_URL = 'http://localhost:3001/api';
 
 const patentAPI = {
   createPatent: async (patentData) => {
-    const response = await fetch(`${API_BASE_URL}/patents`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(patentData),
-    });
-    return response.json();
+    console.log('🔄 Sending patent data to backend:', patentData);
+    
+    try {
+      const response = await fetch(`${API_BASE_URL}/patents`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(patentData),
+      });
+      
+      const data = await response.json();
+      
+      // Enhanced error handling
+      if (!response.ok) {
+        console.error('❌ Backend error response:', data);
+        throw new Error(data.error || data.message || `HTTP error! status: ${response.status}`);
+      }
+      
+      console.log('✅ Backend response:', data);
+      return data;
+    } catch (error) {
+      console.error('❌ Network error:', error);
+      throw error;
+    }
   },
 
   updatePatent: async (id, patentData) => {
@@ -88,7 +106,6 @@ const patentAPI = {
 };
 
 const downloadSampleDocument = () => {
-  // Replace with your actual Copyright Format file URL
   const sampleDocUrl = 'Patent Format.docx';
   
   const link = document.createElement('a');
@@ -100,6 +117,7 @@ const downloadSampleDocument = () => {
 };
 
 const PatentFilingProcess = () => {
+  const { user } = useUser();
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     inventionTitle: '',
@@ -134,6 +152,14 @@ const PatentFilingProcess = () => {
     { id: 3, title: 'Inventor details', type: 'text' },
     { id: 4, title: 'Power of attorney (if applicable)', type: 'file' }
   ];
+
+  // Get Clerk user ID from authentication
+  const getClerkUserId = () => {
+    if (!user) {
+      throw new Error('User not authenticated. Please log in.');
+    }
+    return user.id;
+  };
 
   const toggleDocumentCompletion = (docId) => {
     if (completedDocuments.includes(docId)) {
@@ -202,15 +228,13 @@ const PatentFilingProcess = () => {
       setLoading(true);
       setError('');
 
-      // Step 1: Create order on backend
-      const data = await patentAPI.createPaymentOrder(5000); // ₹5000 for patent filing
+      const data = await patentAPI.createPaymentOrder(5000);
      
       if (!data.success) {
         throw new Error(data.message || "Failed to create order");
       }
       const { order } = data;
      
-      // Step 2: Initialize Razorpay Checkout
       const options = {
         key: data.key_id,
         amount: order.amount.toString(),
@@ -220,7 +244,6 @@ const PatentFilingProcess = () => {
         order_id: order.id,
         handler: async function (response) {
           try {
-            // Step 3: Verify payment on backend
             const verifyData = await patentAPI.verifyPayment({
               razorpay_order_id: response.razorpay_order_id,
               razorpay_payment_id: response.razorpay_payment_id,
@@ -231,7 +254,6 @@ const PatentFilingProcess = () => {
               setPaymentCompleted(true);
               alert("Payment successful! ✅");
               
-              // Update step after payment
               if (patentId) {
                 await patentAPI.updateStep(patentId, currentStep + 1);
               }
@@ -248,12 +270,13 @@ const PatentFilingProcess = () => {
         },
         prefill: {
           name: formData.applicantName || "User",
-          email: formData.email || "user@example.com",
-          contact: formData.phone || "9999999999"
+          email: user?.primaryEmailAddress?.emailAddress || formData.email || "user@example.com",
+          contact: user?.primaryPhoneNumber?.phoneNumber || formData.phone || "9999999999"
         },
         notes: {
           application_type: "patent",
-          patent_id: patentId
+          patent_id: patentId,
+          clerkUserId: user?.id
         },
         theme: {
           color: "#14b8a6"
@@ -266,14 +289,12 @@ const PatentFilingProcess = () => {
         }
       };
       
-      // Check if Razorpay script is loaded
       if (!window.Razorpay) {
         throw new Error("Razorpay SDK not loaded. Please refresh the page.");
       }
       
       const rzp = new window.Razorpay(options);
      
-      // Handle payment failures
       rzp.on('payment.failed', function (response) {
         console.error("Payment failed:", response.error);
         setError(`Payment failed: ${response.error.description}`);
@@ -300,7 +321,8 @@ const PatentFilingProcess = () => {
 
     try {
       if (currentStep === 1) {
-        // Save basic patent data
+        const clerkUserId = getClerkUserId();
+        
         const patentData = {
           inventionTitle: formData.inventionTitle,
           inventorName: formData.inventorName,
@@ -309,37 +331,50 @@ const PatentFilingProcess = () => {
           email: formData.email,
           phone: formData.phone,
           completedDocuments: completedDocuments,
-          currentStep: 2
+          currentStep: 2,
+          clerkUserId: clerkUserId
         };
+
+        console.log('📤 Creating patent with data:', patentData);
 
         const result = await patentAPI.createPatent(patentData);
         
+        console.log('📥 Backend response:', result);
+        
+        // Enhanced response handling
         if (result.success) {
-          setPatentId(result.data._id || result.data.id);
+          const patentId = result.data?._id || result.data?.id || result._id || result.data;
+          console.log('✅ Patent created successfully. ID:', patentId);
+          setPatentId(patentId);
           
           // Upload files if any
           if (technicalDrawings.length > 0) {
-            await patentAPI.uploadFiles(result.data._id || result.data.id, technicalDrawings, 'technical');
+            console.log('📤 Uploading technical drawings...');
+            await patentAPI.uploadFiles(patentId, technicalDrawings, 'technical');
           }
           
           if (supportingDocuments.length > 0) {
-            await patentAPI.uploadFiles(result.data._id || result.data.id, supportingDocuments, 'supporting');
+            console.log('📤 Uploading supporting documents...');
+            await patentAPI.uploadFiles(patentId, supportingDocuments, 'supporting');
           }
           
           setCurrentStep(2);
+          setError(''); // Clear any previous errors
         } else {
-          setError(result.error || 'Failed to save patent data');
+          // Handle backend error response
+          const errorMsg = result.error || result.message || 'Failed to save patent data';
+          console.error('❌ Backend error:', errorMsg);
+          setError(errorMsg);
         }
       } else {
-        // For other steps, just update the step
         if (patentId) {
           await patentAPI.updateStep(patentId, currentStep + 1);
         }
         setCurrentStep(currentStep + 1);
       }
     } catch (err) {
-      setError('An error occurred while saving your data');
-      console.error('Error:', err);
+      console.error('💥 Patent creation error:', err);
+      setError(err.message || 'An error occurred while saving your data. Please check the console for details.');
     } finally {
       setLoading(false);
     }
@@ -351,9 +386,20 @@ const PatentFilingProcess = () => {
     }
   };
 
+  // Show loading or authentication required if user is not available
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Authentication Required</h1>
+          <p className="text-gray-300">Please log in to access the patent filing process.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-900 text-white overflow-y-auto relative">
-      {/* Background Pattern */}
       <div className="absolute inset-0 opacity-5 pointer-events-none">
         <div className="absolute inset-0" style={{
           backgroundImage: 'radial-gradient(circle at 25px 25px, #ffffff 2px, transparent 0)',
@@ -362,7 +408,6 @@ const PatentFilingProcess = () => {
       </div>
 
       <div className="relative container mx-auto px-6 py-16">
-        {/* Header */}
         <div className="text-center mb-16">
           <h1 className="text-4xl md:text-5xl font-bold mb-6 text-white">
             Patent Filing Process
@@ -370,9 +415,10 @@ const PatentFilingProcess = () => {
           <p className="text-xl text-gray-300 max-w-3xl mx-auto">
             Step-by-step guidance through your patent application
           </p>
+          <p className="text-sm text-teal-400 mt-2">Logged in as: {user.fullName || user.primaryEmailAddress?.emailAddress}</p>
         </div>
 
-        {/* Error Display */}
+        {/* Enhanced Error Display */}
         {error && (
           <div className="mb-6 p-4 bg-red-500/20 border border-red-500 rounded-lg text-red-200">
             <div className="flex items-center">
@@ -382,7 +428,10 @@ const PatentFilingProcess = () => {
                 </svg>
               </div>
               <div className="ml-3">
-                <p className="text-sm">{error}</p>
+                <p className="text-sm font-medium">Error: {error}</p>
+                <p className="text-xs text-red-300 mt-1">
+                  Check browser console for detailed logs
+                </p>
               </div>
             </div>
           </div>
@@ -427,7 +476,6 @@ const PatentFilingProcess = () => {
               ))}
             </div>
           </div>
-          {/* Progress Bar */}
           <div className="w-full bg-gray-800 h-2 rounded-full max-w-4xl mx-auto">
             <div 
               className="bg-gradient-to-r from-teal-500 to-cyan-500 h-2 rounded-full transition-all duration-500"
@@ -436,9 +484,7 @@ const PatentFilingProcess = () => {
           </div>
         </div>
 
-        {/* Main Content */}
         <div className="max-w-4xl mx-auto">
-          {/* Current Step Info */}
           <div className="mb-8">
             <div className="flex items-center space-x-4 mb-4">
               <div className="w-8 h-8 bg-teal-500 rounded-full flex items-center justify-center text-sm font-bold">
@@ -456,7 +502,6 @@ const PatentFilingProcess = () => {
           {/* Step 1 Content - Document Preparation */}
           {currentStep === 1 && (
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
-              {/* Required Documents Checklist */}
               <div className="mb-8">
                 <h3 className="text-xl font-semibold mb-6 text-white">Required Documents Checklist:</h3>
                 <div className="grid md:grid-cols-2 gap-4">
@@ -491,7 +536,6 @@ const PatentFilingProcess = () => {
                 </div>
               </div>
 
-              {/* Form Fields */}
               <div className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
@@ -581,139 +625,135 @@ const PatentFilingProcess = () => {
 
                 {/* File Upload Areas */}
                 <div className="grid md:grid-cols-2 gap-6">
-  {/* Technical Drawings */}
-  <div className="flex flex-col">
-    <label className="block text-sm font-semibold mb-3 text-gray-200">
-      Upload Technical Drawings
-    </label>
-    <div
-      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 flex-1 ${
-        dragOver.technical
-          ? 'border-teal-400 bg-teal-400/10'
-          : 'border-gray-600 hover:border-teal-500'
-      }`}
-      onDragOver={(e) => handleDragOver(e, 'technical')}
-      onDragLeave={(e) => handleDragLeave(e, 'technical')}
-      onDrop={(e) => handleDrop(e, 'technical')}
-    >
-      <Upload className="w-8 h-14 text-gray-400 mx-auto mb-3" />
-      <p className="text-sm text-gray-300 mb-3">
-        Drag & drop files here or click to browse
-      </p>
-      <p className="text-xs text-gray-400 mb-3">
-        You can upload your work file which describes about your work
-      </p>
-      <input
-        type="file"
-        multiple
-        accept=".pdf,.jpg,.jpeg,.png,.dwg"
-        onChange={(e) => handleFileSelect(e, 'technical')}
-        className="hidden"
-        id="technical-upload"
-      />
-      <label
-        htmlFor="technical-upload"
-        className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors cursor-pointer"
-      >
-        Choose Files
-      </label>
-    </div>
-    {technicalDrawings.length > 0 && (
-      <div className="mt-3 space-y-2">
-        {technicalDrawings.map((file, index) => (
-          <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
-            <span className="text-sm text-gray-300">{file.name}</span>
-            <button
-              onClick={() => removeFile(index, 'technical')}
-              className="text-red-400 hover:text-red-300 text-sm"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
+                  <div className="flex flex-col">
+                    <label className="block text-sm font-semibold mb-3 text-gray-200">
+                      Upload Technical Drawings
+                    </label>
+                    <div
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 flex-1 ${
+                        dragOver.technical
+                          ? 'border-teal-400 bg-teal-400/10'
+                          : 'border-gray-600 hover:border-teal-500'
+                      }`}
+                      onDragOver={(e) => handleDragOver(e, 'technical')}
+                      onDragLeave={(e) => handleDragLeave(e, 'technical')}
+                      onDrop={(e) => handleDrop(e, 'technical')}
+                    >
+                      <Upload className="w-8 h-14 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm text-gray-300 mb-3">
+                        Drag & drop files here or click to browse
+                      </p>
+                      <p className="text-xs text-gray-400 mb-3">
+                        You can upload your work file which describes about your work
+                      </p>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png,.dwg"
+                        onChange={(e) => handleFileSelect(e, 'technical')}
+                        className="hidden"
+                        id="technical-upload"
+                      />
+                      <label
+                        htmlFor="technical-upload"
+                        className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors cursor-pointer"
+                      >
+                        Choose Files
+                      </label>
+                    </div>
+                    {technicalDrawings.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {technicalDrawings.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
+                            <span className="text-sm text-gray-300">{file.name}</span>
+                            <button
+                              onClick={() => removeFile(index, 'technical')}
+                              className="text-red-400 hover:text-red-300 text-sm"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
-  {/* Supporting Documents */}
-  <div className="flex flex-col">
-    <div className="flex items-center justify-between mb-3">
-      <label className="block text-sm font-semibold text-gray-200">
-        Upload Supporting Documents
-      </label>
-      {/* Sample Document Download Button */}
-      <button 
-        onClick={() => downloadSampleDocument()}
-        className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
-      >
-        <Download className="w-4 h-4" />
-        Download Patent Format
-      </button>
-    </div>
+                  <div className="flex flex-col">
+                    <div className="flex items-center justify-between mb-3">
+                      <label className="block text-sm font-semibold text-gray-200">
+                        Upload Supporting Documents
+                      </label>
+                      <button 
+                        onClick={() => downloadSampleDocument()}
+                        className="flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded-lg transition-colors"
+                      >
+                        <Download className="w-4 h-4" />
+                        Download Patent Format
+                      </button>
+                    </div>
 
-    <div
-      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 flex-1 ${
-        dragOver.supporting
-          ? 'border-teal-400 bg-teal-400/10'
-          : 'border-gray-600 hover:border-teal-500'
-      }`}
-      onDragOver={(e) => handleDragOver(e, 'supporting')}
-      onDragLeave={(e) => handleDragLeave(e, 'supporting')}
-      onDrop={(e) => handleDrop(e, 'supporting')}
-    >
-      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
-      <p className="text-sm text-gray-300 mb-3">
-        Drag & drop files here or click to browse
-      </p>
-      <p className="text-xs text-gray-400 mb-3">
-        You can upload your work file which describes about your work
-      </p>
-      <input
-        type="file"
-        multiple
-        accept=".pdf,.doc,.docx"
-        onChange={(e) => handleFileSelect(e, 'supporting')}
-        className="hidden"
-        id="supporting-upload"
-      />
-      <label
-        htmlFor="supporting-upload"
-        className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors cursor-pointer"
-      >
-        Choose Files
-      </label>
-    </div>
+                    <div
+                      className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-200 flex-1 ${
+                        dragOver.supporting
+                          ? 'border-teal-400 bg-teal-400/10'
+                          : 'border-gray-600 hover:border-teal-500'
+                      }`}
+                      onDragOver={(e) => handleDragOver(e, 'supporting')}
+                      onDragLeave={(e) => handleDragLeave(e, 'supporting')}
+                      onDrop={(e) => handleDrop(e, 'supporting')}
+                    >
+                      <FileText className="w-8 h-8 text-gray-400 mx-auto mb-3" />
+                      <p className="text-sm text-gray-300 mb-3">
+                        Drag & drop files here or click to browse
+                      </p>
+                      <p className="text-xs text-gray-400 mb-3">
+                        You can upload your work file which describes about your work
+                      </p>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.doc,.docx"
+                        onChange={(e) => handleFileSelect(e, 'supporting')}
+                        className="hidden"
+                        id="supporting-upload"
+                      />
+                      <label
+                        htmlFor="supporting-upload"
+                        className="inline-block px-4 py-2 bg-teal-600 text-white rounded-lg hover:bg-teal-700 transition-colors cursor-pointer"
+                      >
+                        Choose Files
+                      </label>
+                    </div>
 
-    {/* Sample Document Info */}
-    <div className="mt-3 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
-      <p className="text-xs text-blue-300 flex items-center gap-2">
-        <Info className="w-4 h-4" />
-        Download the Patent Format sample above and upload your documents in the same format
-      </p>
-    </div>
+                    <div className="mt-3 p-3 bg-blue-900/20 border border-blue-700/30 rounded-lg">
+                      <p className="text-xs text-blue-300 flex items-center gap-2">
+                        <Info className="w-4 h-4" />
+                        Download the Patent Format sample above and upload your documents in the same format
+                      </p>
+                    </div>
 
-    {supportingDocuments.length > 0 && (
-      <div className="mt-3 space-y-2">
-        {supportingDocuments.map((file, index) => (
-          <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
-            <span className="text-sm text-gray-300">{file.name}</span>
-            <button
-              onClick={() => removeFile(index, 'supporting')}
-              className="text-red-400 hover:text-red-300 text-sm"
-            >
-              Remove
-            </button>
-          </div>
-        ))}
-      </div>
-    )}
-  </div>
-</div>
+                    {supportingDocuments.length > 0 && (
+                      <div className="mt-3 space-y-2">
+                        {supportingDocuments.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-gray-700/50 p-2 rounded">
+                            <span className="text-sm text-gray-300">{file.name}</span>
+                            <button
+                              onClick={() => removeFile(index, 'supporting')}
+                              className="text-red-400 hover:text-red-300 text-sm"
+                            >
+                              Remove
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
           )}
 
-          {/* Step 3 - Payment */}
+          {/* Other steps remain the same */}
           {currentStep === 3 && (
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700">
               <div className="text-center mb-8">
@@ -727,7 +767,6 @@ const PatentFilingProcess = () => {
               </div>
 
               <div className="max-w-md mx-auto">
-                {/* Fee Breakdown */}
                 <div className="bg-gray-700/50 rounded-xl p-6 mb-6">
                   <h4 className="text-lg font-semibold mb-4 text-white">Fee Breakdown</h4>
                   <div className="space-y-3">
@@ -752,7 +791,6 @@ const PatentFilingProcess = () => {
                   </div>
                 </div>
 
-                {/* Payment Button */}
                 {!paymentCompleted ? (
                   <button
                     onClick={handlePayment}
@@ -782,7 +820,6 @@ const PatentFilingProcess = () => {
                   </div>
                 )}
 
-                {/* Payment Info */}
                 <div className="mt-6 p-4 bg-blue-900/30 border border-blue-700/50 rounded-lg">
                   <p className="text-sm text-blue-200 text-center">
                     🔒 Secure payment powered by Razorpay. All major payment methods accepted.
@@ -792,7 +829,6 @@ const PatentFilingProcess = () => {
             </div>
           )}
 
-          {/* Other Steps Preview */}
           {currentStep > 1 && currentStep !== 3 && (
             <div className="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700 text-center">
               <div className="w-20 h-20 bg-teal-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
@@ -814,7 +850,6 @@ const PatentFilingProcess = () => {
             </div>
           )}
 
-          {/* Navigation */}
           <div className="flex justify-between mt-8">
             <button
               onClick={prevStep}

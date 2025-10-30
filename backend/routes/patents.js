@@ -5,89 +5,432 @@ const uploadUtils = require('../middleware/upload');
 const fs = require('fs');
 const path = require('path');
 
-// Get all patents
-router.get('/', async (req, res) => {
+// ============================================
+// SPECIFIC ROUTES FIRST (before /:id routes)
+// ============================================
+
+// @route   GET /api/patent/stats/overview
+// @desc    Get patent statistics (Admin)
+// @access  Private
+router.get('/stats/overview', async (req, res) => {
   try {
-    const patents = await Patent.find().sort({ createdAt: -1 });
+    const totalPatents = await Patent.countDocuments();
+    const draftPatents = await Patent.countDocuments({ status: 'draft' });
+    const submittedPatents = await Patent.countDocuments({ status: 'submitted' });
+    const underExaminationPatents = await Patent.countDocuments({ status: 'under-examination' });
+    const grantedPatents = await Patent.countDocuments({ status: 'granted' });
+    const publishedPatents = await Patent.countDocuments({ status: 'published' });
+
+    const patentTypeStats = await Patent.aggregate([
+      {
+        $group: {
+          _id: '$patentType',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const sevenDaysAgo = new Date();
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
+    const recentPatents = await Patent.countDocuments({
+      createdAt: { $gte: sevenDaysAgo }
+    });
+
     res.json({
       success: true,
-      data: patents
+      data: {
+        total: totalPatents,
+        draft: draftPatents,
+        submitted: submittedPatents,
+        underExamination: underExaminationPatents,
+        granted: grantedPatents,
+        published: publishedPatents,
+        recent: recentPatents,
+        patentTypeBreakdown: patentTypeStats
+      }
     });
   } catch (error) {
+    console.error('Error fetching patent stats:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch patents',
-      details: error.message
+      message: 'Server error occurred while fetching statistics'
     });
   }
 });
 
-// Get single patent
-router.get('/:id', async (req, res) => {
+// @route   GET /api/patent/user/:clerkUserId/count
+// @desc    Get patent count for user
+// @access  Private
+router.get('/user/:clerkUserId/count', async (req, res) => {
   try {
-    const patent = await Patent.findById(req.params.id);
+    const total = await Patent.countDocuments({ 
+      clerkUserId: req.params.clerkUserId 
+    });
+
+    const draft = await Patent.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'draft'
+    });
+    
+    const submitted = await Patent.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'submitted'
+    });
+    
+    const underExamination = await Patent.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'under-examination'
+    });
+
+    const granted = await Patent.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'granted'
+    });
+
+    const published = await Patent.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'published'
+    });
+
+    const rejected = await Patent.countDocuments({ 
+      clerkUserId: req.params.clerkUserId,
+      status: 'rejected'
+    });
+
+    res.json({
+      success: true,
+      data: {
+        total,
+        draft,
+        submitted,
+        underExamination,
+        granted,
+        published,
+        rejected
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching patent count:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while fetching patent count'
+    });
+  }
+});
+
+// @route   GET /api/patent/user/:clerkUserId/:patentId
+// @desc    Get specific patent details for user
+// @access  Private
+router.get('/user/:clerkUserId/:patentId', async (req, res) => {
+  try {
+    const patent = await Patent.findOne({
+      clerkUserId: req.params.clerkUserId,
+      $or: [
+        { _id: req.params.patentId },
+        { applicationNumber: req.params.patentId }
+      ]
+    });
+
     if (!patent) {
       return res.status(404).json({
         success: false,
-        error: 'Patent not found'
+        message: 'Patent application not found'
       });
     }
+
     res.json({
       success: true,
       data: patent
     });
   } catch (error) {
+    console.error('Error fetching patent details:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to fetch patent',
-      details: error.message
+      message: 'Server error occurred while fetching patent details'
     });
   }
 });
 
-// Create new patent application
+// @route   GET /api/patent/user/:clerkUserId
+// @desc    Get patent applications for specific user
+// @access  Private
+router.get('/user/:clerkUserId', async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    console.log(`[patent] Fetching patents for user: ${req.params.clerkUserId}`);
+
+    const patents = await Patent.find({ 
+      clerkUserId: req.params.clerkUserId 
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Patent.countDocuments({ 
+      clerkUserId: req.params.clerkUserId 
+    });
+
+    console.log(`[patent] Found ${patents.length} patents for user ${req.params.clerkUserId}`);
+
+    res.json({
+      success: true,
+      data: patents,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching user patents:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while fetching patent applications'
+    });
+  }
+});
+
+// ============================================
+// GENERIC ROUTES (after specific routes)
+// ============================================
+
+// @route   POST /api/patent
+// @desc    Create a new patent application
+// @access  Private
 router.post('/', async (req, res) => {
   try {
-    const patent = new Patent(req.body);
+    const payload = req.body;
+    console.log('[patent] POST / - payload:', JSON.stringify(payload));
+    
+    // Basic validation
+    if (!payload.inventionTitle) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Invention title is required' 
+      });
+    }
+    if (!payload.clerkUserId) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'User authentication required' 
+      });
+    }
+
+    const patent = new Patent(payload);
     const savedPatent = await patent.save();
+    
+    console.log('[patent] created id:', savedPatent._id);
+    
     res.status(201).json({
       success: true,
       message: 'Patent application created successfully',
       data: savedPatent
     });
   } catch (error) {
+    console.error('[patent] POST / error:', error);
+    
+    if (error.name === 'ValidationError') {
+      const errors = {};
+      Object.keys(error.errors).forEach(key => {
+        errors[key] = error.errors[key].message;
+      });
+
+      return res.status(400).json({
+        success: false,
+        message: 'Validation error',
+        errors
+      });
+    }
+    
     res.status(400).json({
       success: false,
-      error: 'Failed to create patent',
+      error: 'Failed to create patent application',
       details: error.message
     });
   }
 });
 
-// Update patent application
-router.put('/:id', async (req, res) => {
+// @route   GET /api/patent
+// @desc    Get all patent applications (Admin only)
+// @access  Private
+router.get('/', async (req, res) => {
   try {
-    const patent = await Patent.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
+
+    const filter = {};
+
+    if (req.query.status) {
+      filter.status = req.query.status;
+    }
+
+    if (req.query.patentType) {
+      filter.patentType = req.query.patentType;
+    }
+
+    const patents = await Patent.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Patent.countDocuments(filter);
+
+    res.json({
+      success: true,
+      data: patents,
+      pagination: {
+        page,
+        limit,
+        total,
+        pages: Math.ceil(total / limit)
+      }
+    });
+  } catch (error) {
+    console.error('Error fetching patents:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while fetching patent applications'
+    });
+  }
+});
+
+// @route   GET /api/patent/:id
+// @desc    Get patent by ID
+// @access  Private
+router.get('/:id', async (req, res) => {
+  try {
+    const patent = await Patent.findOne({
+      $or: [
+        { _id: req.params.id },
+        { applicationNumber: req.params.id }
+      ]
+    });
+
     if (!patent) {
       return res.status(404).json({
         success: false,
-        error: 'Patent not found'
+        message: 'Patent application not found'
       });
     }
+
     res.json({
       success: true,
-      message: 'Patent updated successfully',
       data: patent
     });
   } catch (error) {
-    res.status(400).json({
+    console.error('Error fetching patent:', error);
+    res.status(500).json({
       success: false,
-      error: 'Failed to update patent',
-      details: error.message
+      message: 'Server error occurred while fetching patent application'
+    });
+  }
+});
+
+// @route   PUT /api/patent/:id
+// @desc    Update patent application
+// @access  Private
+router.put('/:id', async (req, res) => {
+  try {
+    const updates = req.body;
+    const allowedUpdates = ['status', 'currentStep', 'applicationNumber', 'filingDate'];
+
+    const filteredUpdates = {};
+    allowedUpdates.forEach(field => {
+      if (updates[field] !== undefined) {
+        filteredUpdates[field] = updates[field];
+      }
+    });
+
+    const patent = await Patent.findOneAndUpdate(
+      {
+        $or: [
+          { _id: req.params.id },
+          { applicationNumber: req.params.id }
+        ]
+      },
+      filteredUpdates,
+      { new: true, runValidators: true }
+    );
+
+    if (!patent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patent application not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Patent application updated successfully',
+      data: patent
+    });
+  } catch (error) {
+    console.error('Error updating patent:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while updating patent application'
+    });
+  }
+});
+
+// @route   DELETE /api/patent/:id
+// @desc    Delete patent application
+// @access  Private
+router.delete('/:id', async (req, res) => {
+  try {
+    const { clerkUserId } = req.body;
+    
+    const patent = await Patent.findOne({
+      $or: [
+        { _id: req.params.id },
+        { applicationNumber: req.params.id }
+      ]
+    });
+
+    if (!patent) {
+      return res.status(404).json({
+        success: false,
+        message: 'Patent application not found'
+      });
+    }
+
+    // Verify ownership
+    if (clerkUserId && patent.clerkUserId !== clerkUserId) {
+      return res.status(403).json({
+        success: false,
+        message: 'Access denied. You can only delete your own applications.'
+      });
+    }
+
+    // Delete associated files
+    const allFiles = [...(patent.technicalDrawings || []), ...(patent.supportingDocuments || [])];
+    allFiles.forEach(file => {
+      try {
+        if (fs.existsSync(file.path)) {
+          fs.unlinkSync(file.path);
+          console.log(`Deleted file: ${file.path}`);
+        }
+      } catch (fileError) {
+        console.error(`Error deleting file ${file.path}:`, fileError);
+      }
+    });
+
+    await Patent.findByIdAndDelete(patent._id);
+
+    res.json({
+      success: true,
+      message: 'Patent application deleted successfully'
+    });
+  } catch (error) {
+    console.error('Error deleting patent:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Server error occurred while deleting patent application'
     });
   }
 });
@@ -95,19 +438,18 @@ router.put('/:id', async (req, res) => {
 // Upload technical drawings
 router.post('/:id/technical-drawings', uploadUtils.upload.array('drawings', 10), async (req, res) => {
   try {
+    console.log(`[patent] POST /${req.params.id}/technical-drawings - files count:`, req.files && req.files.length);
+    
     const patent = await Patent.findById(req.params.id);
     if (!patent) {
-      // Clean up uploaded files if patent not found
       if (req.files && req.files.length > 0) {
         req.files.forEach(file => {
-          if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
+          if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
         });
       }
       return res.status(404).json({
         success: false,
-        error: 'Patent not found'
+        message: 'Patent application not found'
       });
     }
 
@@ -116,11 +458,14 @@ router.post('/:id/technical-drawings', uploadUtils.upload.array('drawings', 10),
       originalName: file.originalname,
       path: file.path,
       size: file.size,
-      mimetype: file.mimetype
+      mimetype: file.mimetype,
+      uploadDate: new Date()
     }));
 
     patent.technicalDrawings.push(...drawings);
     await patent.save();
+
+    console.log('[patent] after drawings upload, id:', patent._id, 'drawingsCount:', (patent.technicalDrawings || []).length);
 
     res.json({
       success: true,
@@ -128,17 +473,15 @@ router.post('/:id/technical-drawings', uploadUtils.upload.array('drawings', 10),
       data: drawings
     });
   } catch (error) {
-    // Clean up files on error
+    console.error(`[patent] POST /${req.params.id}/technical-drawings error:`, error);
     if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
       });
     }
     res.status(500).json({
       success: false,
-      error: 'Failed to upload technical drawings',
+      message: 'Failed to upload technical drawings',
       details: error.message
     });
   }
@@ -169,19 +512,18 @@ router.get('/', async (req, res) => {
 // Upload supporting documents
 router.post('/:id/supporting-documents', uploadUtils.upload.array('documents', 10), async (req, res) => {
   try {
+    console.log(`[patent] POST /${req.params.id}/supporting-documents - files count:`, req.files && req.files.length);
+    
     const patent = await Patent.findById(req.params.id);
     if (!patent) {
-      // Clean up uploaded files if patent not found
       if (req.files && req.files.length > 0) {
         req.files.forEach(file => {
-          if (fs.existsSync(file.path)) {
-            fs.unlinkSync(file.path);
-          }
+          if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
         });
       }
       return res.status(404).json({
         success: false,
-        error: 'Patent not found'
+        message: 'Patent application not found'
       });
     }
 
@@ -190,11 +532,14 @@ router.post('/:id/supporting-documents', uploadUtils.upload.array('documents', 1
       originalName: file.originalname,
       path: file.path,
       size: file.size,
-      mimetype: file.mimetype
+      mimetype: file.mimetype,
+      uploadDate: new Date()
     }));
 
     patent.supportingDocuments.push(...documents);
     await patent.save();
+
+    console.log('[patent] after documents upload, id:', patent._id, 'documentsCount:', (patent.supportingDocuments || []).length);
 
     res.json({
       success: true,
@@ -202,44 +547,38 @@ router.post('/:id/supporting-documents', uploadUtils.upload.array('documents', 1
       data: documents
     });
   } catch (error) {
-    // Clean up files on error
+    console.error(`[patent] POST /${req.params.id}/supporting-documents error:`, error);
     if (req.files && req.files.length > 0) {
       req.files.forEach(file => {
-        if (fs.existsSync(file.path)) {
-          fs.unlinkSync(file.path);
-        }
+        if (fs.existsSync(file.path)) fs.unlinkSync(file.path);
       });
     }
     res.status(500).json({
       success: false,
-      error: 'Failed to upload supporting documents',
+      message: 'Failed to upload supporting documents',
       details: error.message
     });
   }
 });
 
+router.use(uploadUtils.handleMulterError);
+
 // Update completed documents
 router.patch('/:id/completed-documents', async (req, res) => {
   try {
-    const { documentId, completed } = req.body;
+    const { documentIds } = req.body;
     const patent = await Patent.findById(req.params.id);
     
     if (!patent) {
       return res.status(404).json({
         success: false,
-        error: 'Patent not found'
+        message: 'Patent application not found'
       });
     }
 
-    if (completed) {
-      if (!patent.completedDocuments.includes(documentId)) {
-        patent.completedDocuments.push(documentId);
-      }
-    } else {
-      patent.completedDocuments = patent.completedDocuments.filter(id => id !== documentId);
-    }
-
+    patent.completedDocuments = documentIds || [];
     await patent.save();
+
     res.json({
       success: true,
       message: 'Completed documents updated successfully',
@@ -248,7 +587,7 @@ router.patch('/:id/completed-documents', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: 'Failed to update completed documents',
+      message: 'Failed to update completed documents',
       details: error.message
     });
   }
@@ -258,6 +597,13 @@ router.patch('/:id/completed-documents', async (req, res) => {
 router.patch('/:id/step', async (req, res) => {
   try {
     const { step } = req.body;
+    if (typeof step !== 'number' || step < 1 || step > 6) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Invalid step value' 
+      });
+    }
+
     const patent = await Patent.findByIdAndUpdate(
       req.params.id,
       { currentStep: step },
@@ -267,7 +613,7 @@ router.patch('/:id/step', async (req, res) => {
     if (!patent) {
       return res.status(404).json({
         success: false,
-        error: 'Patent not found'
+        message: 'Patent application not found'
       });
     }
 
@@ -279,40 +625,7 @@ router.patch('/:id/step', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: 'Failed to update step',
-      details: error.message
-    });
-  }
-});
-
-// Delete patent
-router.delete('/:id', async (req, res) => {
-  try {
-    const patent = await Patent.findById(req.params.id);
-    if (!patent) {
-      return res.status(404).json({
-        success: false,
-        error: 'Patent not found'
-      });
-    }
-
-    // Delete associated files
-    const allFiles = [...patent.technicalDrawings, ...patent.supportingDocuments];
-    allFiles.forEach(file => {
-      if (fs.existsSync(file.path)) {
-        fs.unlinkSync(file.path);
-      }
-    });
-
-    await Patent.findByIdAndDelete(req.params.id);
-    res.json({
-      success: true,
-      message: 'Patent deleted successfully'
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      error: 'Failed to delete patent',
+      message: 'Failed to update step',
       details: error.message
     });
   }
@@ -325,41 +638,70 @@ router.get('/:id/download/:fileId', async (req, res) => {
     if (!patent) {
       return res.status(404).json({
         success: false,
-        error: 'Patent not found'
+        message: 'Patent application not found'
       });
     }
 
-    // Find file in both technical drawings and supporting documents
-    const file = [...patent.technicalDrawings, ...patent.supportingDocuments]
-      .find(f => f._id.toString() === req.params.fileId);
+    const file = [...(patent.technicalDrawings || []), ...(patent.supportingDocuments || [])]
+      .find(f => f._id && f._id.toString() === req.params.fileId);
 
     if (!file) {
       return res.status(404).json({
         success: false,
-        error: 'File not found'
+        message: 'File not found'
       });
     }
 
     if (!fs.existsSync(file.path)) {
       return res.status(404).json({
         success: false,
-        error: 'File not found on server'
+        message: 'File missing on server'
       });
     }
 
-    res.download(file.path, file.originalName);
+    res.download(file.path, file.originalName || file.filename);
   } catch (error) {
     res.status(500).json({
       success: false,
-      error: 'Failed to download file',
+      message: 'Failed to download file',
       details: error.message
     });
   }
 });
 
+// Get certificate
+router.get('/:id/certificate', async (req, res) => {
+  try {
+    const patent = await Patent.findById(req.params.id);
+    if (!patent) {
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Patent application not found' 
+      });
+    }
 
-// Multer error handling
-// Multer error handling - ensure this middleware is registered before exporting the router
-router.use(uploadUtils.handleMulterError);
+    if (!['granted', 'published', 'approved'].includes(patent.status)) {
+      return res.json({ 
+        success: false, 
+        message: 'Certificate not yet issued', 
+        status: patent.status, 
+        currentStep: patent.currentStep 
+      });
+    }
+
+    res.json({ 
+      success: true, 
+      message: 'Certificate available', 
+      applicationNumber: patent.applicationNumber, 
+      grantedOn: patent.updatedAt 
+    });
+  } catch (error) {
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to fetch certificate', 
+      details: error.message 
+    });
+  }
+});
 
 module.exports = router;

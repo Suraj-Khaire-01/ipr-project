@@ -1,5 +1,6 @@
 import { Award, CheckCircle, Search, Upload, Download, Info } from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
+import { useUser } from '@clerk/clerk-react'; // Import Clerk hook
 
 // Top-level memoized WorkDetails component to avoid remounting issues
 const WorkDetails = memo(({ formData, onChange }) => (
@@ -115,6 +116,7 @@ const WorkDetails = memo(({ formData, onChange }) => (
 ));
 
 export default function CopyrightFillingProcess() {
+  const { user } = useUser(); // Get Clerk user object
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState({
     title: '',
@@ -167,7 +169,7 @@ export default function CopyrightFillingProcess() {
     document.body.removeChild(link);
   };
 
-  // --- New: API wiring state and helpers ---
+  // --- UPDATED: API wiring with Clerk User ID ---
   const [appId, setAppId] = useState(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
@@ -175,10 +177,22 @@ export default function CopyrightFillingProcess() {
   // Adjust this base if your backend runs on a different host/port
   const API_BASE = 'http://localhost:3001/api';
 
+  // Get Clerk user ID from authentication
+  const getClerkUserId = () => {
+    if (!user) {
+      throw new Error('User not authenticated. Please log in.');
+    }
+    return user.id;
+  };
+
   async function createApplication() {
     setErrorMessage('');
     try {
       setLoading(true);
+      
+      // Get Clerk user ID
+      const clerkUserId = getClerkUserId();
+      
       const payload = {
         title: formData.title,
         workType: formData.workType,
@@ -187,8 +201,11 @@ export default function CopyrightFillingProcess() {
         applicantName: formData.applicantName,
         description: formData.description,
         publicationDate: formData.publicationDate || null,
-        isPublished: !!formData.isPublished
+        isPublished: !!formData.isPublished,
+        clerkUserId: clerkUserId // Send Clerk user ID to backend
       };
+
+      console.log('Creating application with clerkUserId:', clerkUserId);
 
       const res = await fetch(`${API_BASE}/copyright`, {
         method: 'POST',
@@ -319,95 +336,96 @@ export default function CopyrightFillingProcess() {
   );
 
   // --- Razorpay Payment Handler ---
-const handlePayment = async () => {
-  try {
-    // Step 1: Create order on backend
-    const res = await fetch(`${API_BASE}/payment/order`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: 1000 }) // ₹1000 in rupees (backend will convert to paise)
-    });
+  const handlePayment = async () => {
+    try {
+      // Step 1: Create order on backend
+      const res = await fetch(`${API_BASE}/payment/order`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount: 1000 }) // ₹1000 in rupees (backend will convert to paise)
+      });
 
-    const data = await res.json();
-    
-    if (!data.success || !res.ok) {
-      throw new Error(data.message || "Failed to create order");
-    }
-
-    const { order } = data; // Backend sends { success, order, key_id }
-    
-    // Step 2: Initialize Razorpay Checkout
-    const options = {
-      key: data.key_id, // Use key_id from backend response
-      amount: order.amount.toString(),
-      currency: order.currency,
-      name: "IP Secure Legal",
-      description: "Copyright Application Payment",
-      order_id: order.id,
-      handler: async function (response) {
-        try {
-          // Step 3: Verify payment on backend
-          const verifyRes = await fetch(`${API_BASE}/payment/verify`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature
-            })
-          });
-
-          const verifyData = await verifyRes.json();
-          
-          if (verifyData.success) {
-            alert("Payment successful! ✅");
-            setCurrentStep(5); // Go to next step after successful payment
-          } else {
-            alert("Payment verification failed! ❌");
-          }
-        } catch (error) {
-          console.error("Payment verification error:", error);
-          alert("Error verifying payment. Please contact support.");
-        }
-      },
-      prefill: {
-        name: formData.applicantName || "User",
-        email: formData.email || "user@example.com",
-        contact: formData.phone || "9999999999"
-      },
-      notes: {
-        application_type: "copyright"
-      },
-      theme: { 
-        color: "#10b981" 
-      },
-      modal: {
-        ondismiss: function() {
-          console.log("Payment cancelled by user");
-        }
+      const data = await res.json();
+      
+      if (!data.success || !res.ok) {
+        throw new Error(data.message || "Failed to create order");
       }
-    };
 
-    // Check if Razorpay script is loaded
-    if (!window.Razorpay) {
-      throw new Error("Razorpay SDK not loaded. Please refresh the page.");
+      const { order } = data; // Backend sends { success, order, key_id }
+      
+      // Step 2: Initialize Razorpay Checkout
+      const options = {
+        key: data.key_id, // Use key_id from backend response
+        amount: order.amount.toString(),
+        currency: order.currency,
+        name: "IP Secure Legal",
+        description: "Copyright Application Payment",
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            // Step 3: Verify payment on backend
+            const verifyRes = await fetch(`${API_BASE}/payment/verify`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature
+              })
+            });
+
+            const verifyData = await verifyRes.json();
+            
+            if (verifyData.success) {
+              alert("Payment successful! ✅");
+              setCurrentStep(5); // Go to next step after successful payment
+            } else {
+              alert("Payment verification failed! ❌");
+            }
+          } catch (error) {
+            console.error("Payment verification error:", error);
+            alert("Error verifying payment. Please contact support.");
+          }
+        },
+        prefill: {
+          name: formData.applicantName || "User",
+          email: user?.primaryEmailAddress?.emailAddress || "user@example.com", // Use Clerk user email
+          contact: user?.primaryPhoneNumber?.phoneNumber || "9999999999" // Use Clerk user phone if available
+        },
+        notes: {
+          application_type: "copyright",
+          clerkUserId: user?.id // Include Clerk user ID in payment notes
+        },
+        theme: { 
+          color: "#10b981" 
+        },
+        modal: {
+          ondismiss: function() {
+            console.log("Payment cancelled by user");
+          }
+        }
+      };
+
+      // Check if Razorpay script is loaded
+      if (!window.Razorpay) {
+        throw new Error("Razorpay SDK not loaded. Please refresh the page.");
+      }
+
+      const rzp = new window.Razorpay(options);
+      
+      // Handle payment failures
+      rzp.on('payment.failed', function (response) {
+        console.error("Payment failed:", response.error);
+        alert(`Payment failed: ${response.error.description}`);
+      });
+      
+      rzp.open();
+      
+    } catch (err) {
+      console.error("Payment initialization error:", err);
+      alert(err.message || "Payment initialization failed");
     }
-
-    const rzp = new window.Razorpay(options);
-    
-    // Handle payment failures
-    rzp.on('payment.failed', function (response) {
-      console.error("Payment failed:", response.error);
-      alert(`Payment failed: ${response.error.description}`);
-    });
-    
-    rzp.open();
-    
-  } catch (err) {
-    console.error("Payment initialization error:", err);
-    alert(err.message || "Payment initialization failed");
-  }
-};
+  };
 
   const UploadWorkStep = () => (
     <div className="bg-gray-800 rounded-lg p-8">
@@ -505,6 +523,10 @@ const handlePayment = async () => {
           <div className="flex justify-between">
             <span className="text-gray-300">Language:</span>
             <span className="text-gray-400">{formData.language || 'Not Selected'}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-gray-300">Registered User:</span>
+            <span className="text-gray-400">{user?.fullName || user?.primaryEmailAddress?.emailAddress || 'Not available'}</span>
           </div>
         </div>
       </div>
@@ -633,12 +655,25 @@ const handlePayment = async () => {
     }
   };
 
+  // Show loading or authentication required if user is not available
+  if (!user) {
+    return (
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold text-white mb-4">Authentication Required</h1>
+          <p className="text-gray-300">Please log in to access the copyright registration process.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-900 py-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="text-center mb-12">
           <h1 className="text-4xl font-bold text-white mb-4">Copyright Registration Process</h1>
           <p className="text-xl text-gray-300">Protect your creative works with official copyright registration</p>
+          <p className="text-sm text-emerald-400 mt-2">Logged in as: {user.fullName || user.primaryEmailAddress?.emailAddress}</p>
         </div>
         
         <StepIndicator />

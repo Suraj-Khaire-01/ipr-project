@@ -1,9 +1,49 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useUser } from "@clerk/clerk-react";
 import { Eye, Download, Trash2, Plus, Calendar, FileText, User, Award, Clock, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-export default function UserPatents({ patents, handleView, handleDelete, handleDownload, isLoading, onRefresh }) {
+export default function UserPatents({ handleView, handleDelete, handleDownload }) {
+  const { user } = useUser();
+  const [patents, setPatents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedPatent, setSelectedPatent] = useState(null);
   const [showModal, setShowModal] = useState(false);
+
+  // Fetch patents for the current user
+  const fetchPatents = async () => {
+    if (!user) return;
+    
+    setLoading(true);
+    setError(null);
+    
+    try {
+      const response = await fetch(`http://localhost:3001/api/patents/user/${user.id}`);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      if (result.success) {
+        setPatents(result.data);
+      } else {
+        setError(result.message);
+      }
+    } catch (error) {
+      console.error('Error fetching patents:', error);
+      setError('Failed to fetch patent applications');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchPatents();
+    }
+  }, [user]);
 
   const getStatusConfig = (status) => {
     switch (status) {
@@ -66,7 +106,7 @@ export default function UserPatents({ patents, handleView, handleDelete, handleD
 
   const getProgressPercentage = (status) => {
     const config = getStatusConfig(status);
-    if (config.stage === 0) return 0; // Rejected
+    if (config.stage === 0) return 0;
     return Math.min((config.stage / 5) * 100, 100);
   };
 
@@ -97,131 +137,238 @@ export default function UserPatents({ patents, handleView, handleDelete, handleD
   const handleViewPatent = (patent) => {
     setSelectedPatent(patent);
     setShowModal(true);
-    handleView(patent, 'patents');
+    if (handleView) handleView(patent, 'patents');
   };
+
+  const refreshPatents = () => {
+    fetchPatents();
+  };
+
+  const handleDownloadCertificate = async (patentId) => {
+    try {
+      const response = await fetch(`http://localhost:3001/api/patent/${patentId}/certificate`);
+      const data = await response.json();
+
+      if (data.success && data.certificateUrl) {
+        window.open(data.certificateUrl, '_blank');
+      } else {
+        alert('Certificate not available yet or still processing');
+      }
+    } catch (error) {
+      console.error('Error downloading certificate:', error);
+      alert('Error downloading certificate');
+    }
+  };
+
+  const handleDeletePatent = async (patentId) => {
+    if (!window.confirm('Are you sure you want to delete this patent application?')) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`http://localhost:3001/api/patent/${patentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ clerkUserId: user.id })
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        setPatents(prev => prev.filter(patent => patent._id !== patentId));
+        if (handleDelete) handleDelete(patentId, 'patents');
+      } else {
+        alert(data.message || 'Failed to delete patent application');
+      }
+    } catch (error) {
+      console.error('Error deleting patent:', error);
+      alert('Error deleting patent application');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-white">Your Patent Applications</h3>
+          <button
+            onClick={() => window.location.href = '/patent'}
+            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
+          >
+            + File New Patent
+          </button>
+        </div>
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto mb-4"></div>
+          <p className="text-slate-400">Loading patent applications...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-xl font-bold text-white">Your Patent Applications</h3>
+          <button
+            onClick={() => window.location.href = '/patent'}
+            className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
+          >
+            + File New Patent
+          </button>
+        </div>
+        <div className="text-center py-12">
+          <div className="text-6xl mb-4">⚠️</div>
+          <p className="text-red-400 mb-4">Error: {error}</p>
+          <button
+            onClick={refreshPatents}
+            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-white mb-2">Your Patent Applications</h2>
-          <p className="text-slate-300">Track the progress of your patent applications</p>
-        </div>
-        <button
-          onClick={() => window.location.href = '/patent'}
-          className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300 flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" />
-          File New Patent
-        </button>
-      </div>
-
-      {patents.length === 0 ? (
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-12 text-center">
-          <div className="text-6xl mb-4">🔬</div>
-          <h3 className="text-xl font-bold text-white mb-2">No Patent Applications Yet</h3>
-          <p className="text-slate-400 mb-6">Start by filing your first patent application to protect your invention.</p>
-          <button
-            onClick={() => window.location.href = '/patent'}
-            className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
-          >
-            File Your First Patent
-          </button>
-        </div>
-      ) : (
-        <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-white/20 bg-white/5">
-                  <th className="text-left py-4 px-6 text-slate-300 font-medium">Patent Details</th>
-                  <th className="text-left py-4 px-6 text-slate-300 font-medium">Application No.</th>
-                  <th className="text-left py-4 px-6 text-slate-300 font-medium">Status</th>
-                  <th className="text-left py-4 px-6 text-slate-300 font-medium">Progress</th>
-                  <th className="text-left py-4 px-6 text-slate-300 font-medium">Filed Date</th>
-                  <th className="text-left py-4 px-6 text-slate-300 font-medium">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {patents.map((patent) => {
-                  const statusConfig = getStatusConfig(patent.status);
-                  return (
-                    <tr key={patent._id} className="border-b border-white/10 hover:bg-white/5 transition-colors">
-                      <td className="py-4 px-6">
-                        <div>
-                          <div className="text-white font-medium text-lg">{patent.inventionTitle}</div>
-                          <div className="text-slate-400 text-sm flex items-center gap-2 mt-1">
-                            <User className="w-4 h-4" />
-                            {patent.inventorName}
-                          </div>
-                          <div className="text-slate-500 text-sm">{patent.patentType || 'Utility Patent'}</div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="text-slate-300 font-mono text-sm">
-                          {patent.applicationNumber || 'Pending Assignment'}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <span className={`px-3 py-1 text-xs rounded-full border capitalize flex items-center gap-2 w-fit ${statusConfig.color}`}>
-                          <span>{statusConfig.icon}</span>
-                          {statusConfig.label}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex items-center gap-3">
-                          <div className="w-20 bg-slate-700 rounded-full h-2">
-                            <div 
-                              className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-300" 
-                              style={{ width: `${getProgressPercentage(patent.status)}%` }}
-                            ></div>
-                          </div>
-                          <span className="text-xs text-slate-400">{statusConfig.stage}/5</span>
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="text-slate-300 flex items-center gap-2">
-                          <Calendar className="w-4 h-4" />
-                          {formatDate(patent.filingDate || patent.createdAt)}
-                        </div>
-                      </td>
-                      <td className="py-4 px-6">
-                        <div className="flex gap-2">
-                          <button 
-                            onClick={() => handleViewPatent(patent)}
-                            className="px-3 py-2 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded-lg text-xs transition-colors flex items-center gap-1"
-                          >
-                            <Eye className="w-3 h-3" />
-                            View
-                          </button>
-                          {['granted', 'published', 'approved'].includes(patent.status) && (
-                            <button 
-                              onClick={() => handleDownload(patent._id, 'patents')}
-                              className="px-3 py-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded-lg text-xs transition-colors flex items-center gap-1"
-                            >
-                              <Download className="w-3 h-3" />
-                              Certificate
-                            </button>
-                          )}
-                          {patent.status === 'draft' && (
-                            <button 
-                              onClick={() => handleDelete(patent._id, 'patents')}
-                              className="px-3 py-2 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded-lg text-xs transition-colors flex items-center gap-1"
-                            >
-                              <Trash2 className="w-3 h-3" />
-                              Delete
-                            </button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+      <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+        <div className="flex items-center justify-between mb-6">
+          <div>
+            <h3 className="text-xl font-bold text-white">Your Patent Applications</h3>
+            <p className="text-slate-400 text-sm mt-1">
+              {patents.length} patent application{patents.length !== 1 ? 's' : ''} found
+            </p>
+          </div>
+          <div className="flex gap-3">
+            <button
+              onClick={refreshPatents}
+              className="px-3 py-2 bg-white/10 text-white rounded-lg hover:bg-white/20 transition-all duration-300"
+              title="Refresh"
+            >
+              🔄
+            </button>
+            <button
+              onClick={() => window.location.href = '/patent'}
+              className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
+            >
+              + File New Patent
+            </button>
           </div>
         </div>
-      )}
+
+        {patents.length === 0 ? (
+          <div className="text-center py-12">
+            <div className="text-6xl mb-4">🔬</div>
+            <p className="text-slate-400 mb-4">No patent applications yet</p>
+            <button
+              onClick={() => window.location.href = '/patent'}
+              className="px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
+            >
+              File Your First Patent
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-4">
+            {patents.map((patent) => {
+              const statusConfig = getStatusConfig(patent.status);
+              return (
+                <div key={patent._id} className="bg-white/5 rounded-xl p-4 hover:bg-white/10 transition-colors">
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-4">
+                        <div className="text-2xl">🔬</div>
+                        <div className="flex-1">
+                          <h4 className="text-white font-medium">
+                            {patent.inventionTitle}
+                          </h4>
+                          <div className="flex gap-4 text-sm text-slate-400 mt-1">
+                            <span>App No: {patent.applicationNumber || 'Pending'}</span>
+                            <span>Inventor: {patent.inventorName}</span>
+                            <span>Type: {patent.patentType || 'Utility Patent'}</span>
+                            {patent.filingDate && (
+                              <span>Filed: {formatDate(patent.filingDate)}</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <span className={`px-3 py-1 text-xs rounded-full border capitalize ${statusConfig.color}`}>
+                        {statusConfig.icon} {statusConfig.label}
+                      </span>
+                      <div className="flex gap-2">
+                        <button 
+                          onClick={() => handleViewPatent(patent)}
+                          className="px-3 py-1 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 rounded text-xs transition-colors"
+                        >
+                          View
+                        </button>
+                        {['granted', 'published', 'approved'].includes(patent.status) && (
+                          <button 
+                            onClick={() => handleDownloadCertificate(patent._id)}
+                            className="px-3 py-1 bg-green-500/20 text-green-400 hover:bg-green-500/30 rounded text-xs transition-colors"
+                          >
+                            Certificate
+                          </button>
+                        )}
+                        {patent.status === 'draft' && (
+                          <button 
+                            onClick={() => handleDeletePatent(patent._id)}
+                            className="px-3 py-1 bg-red-500/20 text-red-400 hover:bg-red-500/30 rounded text-xs transition-colors"
+                          >
+                            Delete
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  {patent.abstractDescription && (
+                    <div className="mt-3 pl-12">
+                      <p className="text-slate-300 text-sm bg-white/5 p-3 rounded-lg">
+                        {patent.abstractDescription.length > 200 
+                          ? `${patent.abstractDescription.substring(0, 200)}...` 
+                          : patent.abstractDescription}
+                      </p>
+                    </div>
+                  )}
+                  <div className="mt-3 pl-12 flex gap-4 text-xs text-slate-400">
+                    <span>Created: {formatDate(patent.createdAt)}</span>
+                    {patent.updatedAt && patent.updatedAt !== patent.createdAt && (
+                      <span>Updated: {formatDate(patent.updatedAt)}</span>
+                    )}
+                    {patent.priorityDate && (
+                      <span>Priority Date: {formatDate(patent.priorityDate)}</span>
+                    )}
+                  </div>
+                  {((patent.supportingDocuments && patent.supportingDocuments.length > 0) || 
+                    (patent.technicalDrawings && patent.technicalDrawings.length > 0)) && (
+                    <div className="mt-3 pl-12">
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <span>📎 Attachments:</span>
+                        {patent.technicalDrawings && patent.technicalDrawings.length > 0 && (
+                          <span className="bg-purple-500/20 px-2 py-1 rounded">
+                            {patent.technicalDrawings.length} drawing{patent.technicalDrawings.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                        {patent.supportingDocuments && patent.supportingDocuments.length > 0 && (
+                          <span className="bg-blue-500/20 px-2 py-1 rounded">
+                            {patent.supportingDocuments.length} document{patent.supportingDocuments.length !== 1 ? 's' : ''}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
 
       {/* Patent Detail Modal */}
       {showModal && selectedPatent && (
@@ -466,7 +613,7 @@ export default function UserPatents({ patents, handleView, handleDelete, handleD
               {['granted', 'published', 'approved'].includes(selectedPatent.status) && (
                 <div className="flex justify-center pt-6 border-t border-white/20">
                   <button
-                    onClick={() => handleDownload(selectedPatent._id, 'patents')}
+                    onClick={() => handleDownloadCertificate(selectedPatent._id)}
                     className="px-8 py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg hover:from-green-700 hover:to-emerald-700 transition-all duration-300 flex items-center gap-2"
                   >
                     <Download className="w-5 h-5" />
