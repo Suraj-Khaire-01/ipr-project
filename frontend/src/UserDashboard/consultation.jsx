@@ -93,7 +93,7 @@ export default function DashboardConsultation({ handleView, handleDelete }) {
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-xl font-bold text-white">Your Consultation Requests</h3>
           <button
-            onClick={() => window.location.href = '/consultation'}
+            onClick={() => window.location.href = '/consulation'}
             className="px-4 py-2 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-lg hover:from-purple-700 hover:to-blue-700 transition-all duration-300"
           >
             + Book New Consultation
