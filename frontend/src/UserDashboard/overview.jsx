@@ -39,11 +39,11 @@ export default function DashboardOverview({ dashboardData }) {
       console.log('Consultations API Response:', consultationsResult);
       
       if (consultationsResult.success) {
-        const consultations = consultationsResult.data;
+        const consultations = consultationsResult.data || [];
         setRecentConsultations(consultations);
         
-        // Calculate counts manually from the consultations data
-        const total = consultationsResult.pagination?.total || consultations.length;
+        // Calculate counts from the consultations array
+        const total = consultations.length;
         const pending = consultations.filter(c => c.status === 'pending').length;
         const confirmed = consultations.filter(c => c.status === 'confirmed').length;
         const completed = consultations.filter(c => c.status === 'completed').length;
@@ -70,6 +70,15 @@ export default function DashboardOverview({ dashboardData }) {
     } catch (error) {
       console.error('Error fetching consultation data:', error);
       setError(error.message);
+      // Set empty stats on error
+      setConsultationStats({
+        total: 0,
+        pending: 0,
+        confirmed: 0,
+        completed: 0,
+        cancelled: 0
+      });
+      setRecentConsultations([]);
     } finally {
       setLoading(false);
     }
@@ -78,6 +87,8 @@ export default function DashboardOverview({ dashboardData }) {
   useEffect(() => {
     if (isLoaded && user) {
       fetchConsultationData();
+    } else if (isLoaded && !user) {
+      setLoading(false);
     }
   }, [isLoaded, user]);
 
@@ -120,14 +131,23 @@ export default function DashboardOverview({ dashboardData }) {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+    if (!dateString) return 'N/A';
+    try {
+      return new Date(dateString).toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
+    } catch (e) {
+      return 'Invalid Date';
+    }
   };
 
   const getCategoryStats = (items) => {
+    if (!items || !Array.isArray(items)) {
+      return { applied: 0, pending: 0, completed: 0 };
+    }
+
     const applied = items.filter(item => 
       ['submitted', 'applied', 'draft'].includes(item.status)
     ).length;
@@ -143,13 +163,28 @@ export default function DashboardOverview({ dashboardData }) {
     return { applied, pending, completed };
   };
 
+  // Safely get array lengths
+  const patentsCount = dashboardData?.patents?.length || 0;
+  const copyrightsCount = dashboardData?.copyrights?.length || 0;
+  const consultationsCount = consultationStats.total;
+  const totalCount = patentsCount + copyrightsCount + consultationsCount;
+
+  // Get category stats
+  const patentStats = getCategoryStats(dashboardData?.patents || []);
+  const copyrightStats = getCategoryStats(dashboardData?.copyrights || []);
+
   // Combine all activities including fetched consultations
   const allActivities = [
-    ...dashboardData.patents.map(p => ({ ...p, type: 'patent' })),
-    ...dashboardData.copyrights.map(c => ({ ...c, type: 'copyright' })),
+    ...(dashboardData?.patents || []).map(p => ({ ...p, type: 'patent' })),
+    ...(dashboardData?.copyrights || []).map(c => ({ ...c, type: 'copyright' })),
     ...recentConsultations.map(c => ({ ...c, type: 'consultation' }))
-  ].sort((a, b) => new Date(b.updatedAt || b.createdAt) - new Date(a.updatedAt || a.createdAt))
-   .slice(0, 5);
+  ]
+    .sort((a, b) => {
+      const dateA = new Date(a.updatedAt || a.createdAt || 0);
+      const dateB = new Date(b.updatedAt || b.createdAt || 0);
+      return dateB - dateA;
+    })
+    .slice(0, 5);
 
   if (loading) {
     return (
@@ -186,17 +221,42 @@ export default function DashboardOverview({ dashboardData }) {
             Retry
           </button>
         </div>
+        
+        {/* Show partial data if available */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Total Patents</p>
+                <p className="text-3xl font-bold text-white">{patentsCount}</p>
+              </div>
+              <div className="text-4xl">🔬</div>
+            </div>
+          </div>
+          
+          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-2xl p-6">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-slate-400 text-sm">Total Copyrights</p>
+                <p className="text-3xl font-bold text-white">{copyrightsCount}</p>
+              </div>
+              <div className="text-4xl">©️</div>
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
-      {/* Debug Info - Remove this after testing */}
+      {/* Debug Info - Uncomment for testing */}
       {/* <div className="bg-blue-500/10 border border-blue-500/20 rounded-2xl p-4">
         <h4 className="text-blue-400 font-bold text-sm">Debug Info:</h4>
-        <p className="text-blue-300 text-xs">Consultations Found: {consultationStats.total}</p>
-        <p className="text-blue-300 text-xs">Recent Consultations: {recentConsultations.length}</p>
+        <p className="text-blue-300 text-xs">Patents: {patentsCount}</p>
+        <p className="text-blue-300 text-xs">Copyrights: {copyrightsCount}</p>
+        <p className="text-blue-300 text-xs">Consultations: {consultationsCount}</p>
+        <p className="text-blue-300 text-xs">Total: {totalCount}</p>
       </div> */}
 
       {/* Stats Overview */}
@@ -205,19 +265,19 @@ export default function DashboardOverview({ dashboardData }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-400 text-sm">Total Patents</p>
-              <p className="text-3xl font-bold text-white">{dashboardData.patents.length}</p>
+              <p className="text-3xl font-bold text-white">{patentsCount}</p>
             </div>
             <div className="text-4xl">🔬</div>
           </div>
           <div className="mt-4 flex gap-4 text-xs">
             <span className="text-blue-400">
-              {getCategoryStats(dashboardData.patents).applied} applied
+              {patentStats.applied} applied
             </span>
             <span className="text-yellow-400">
-              {getCategoryStats(dashboardData.patents).pending} pending
+              {patentStats.pending} pending
             </span>
             <span className="text-green-400">
-              {getCategoryStats(dashboardData.patents).completed} completed
+              {patentStats.completed} completed
             </span>
           </div>
         </div>
@@ -226,19 +286,19 @@ export default function DashboardOverview({ dashboardData }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-400 text-sm">Total Copyrights</p>
-              <p className="text-3xl font-bold text-white">{dashboardData.copyrights.length}</p>
+              <p className="text-3xl font-bold text-white">{copyrightsCount}</p>
             </div>
             <div className="text-4xl">©️</div>
           </div>
           <div className="mt-4 flex gap-4 text-xs">
             <span className="text-blue-400">
-              {getCategoryStats(dashboardData.copyrights).applied} applied
+              {copyrightStats.applied} applied
             </span>
             <span className="text-yellow-400">
-              {getCategoryStats(dashboardData.copyrights).pending} pending
+              {copyrightStats.pending} pending
             </span>
             <span className="text-green-400">
-              {getCategoryStats(dashboardData.copyrights).completed} completed
+              {copyrightStats.completed} completed
             </span>
           </div>
         </div>
@@ -247,7 +307,7 @@ export default function DashboardOverview({ dashboardData }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-400 text-sm">Consultations</p>
-              <p className="text-3xl font-bold text-white">{consultationStats.total}</p>
+              <p className="text-3xl font-bold text-white">{consultationsCount}</p>
             </div>
             <div className="text-4xl">💬</div>
           </div>
@@ -268,9 +328,7 @@ export default function DashboardOverview({ dashboardData }) {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-slate-400 text-sm">Total Applications</p>
-              <p className="text-3xl font-bold text-white">
-                {dashboardData.patents.length + dashboardData.copyrights.length + consultationStats.total}
-              </p>
+              <p className="text-3xl font-bold text-white">{totalCount}</p>
             </div>
             <div className="text-4xl">📊</div>
           </div>
@@ -290,14 +348,14 @@ export default function DashboardOverview({ dashboardData }) {
             </div>
           ) : (
             allActivities.map((item, index) => (
-              <div key={index} className="flex items-center justify-between bg-white/5 rounded-xl p-4 hover:bg-white/10 transition-colors">
+              <div key={`${item.type}-${item._id || index}`} className="flex items-center justify-between bg-white/5 rounded-xl p-4 hover:bg-white/10 transition-colors">
                 <div className="flex items-center gap-4">
                   <div className="text-2xl">
                     {item.type === 'patent' ? '🔬' : item.type === 'copyright' ? '©️' : '💬'}
                   </div>
                   <div>
                     <p className="text-white font-medium">
-                      {item.inventionTitle || item.title || `${item.consultationType} Consultation - ${item.workType}`}
+                      {item.inventionTitle || item.title || `${item.consultationType || 'General'} Consultation - ${item.workType || 'N/A'}`}
                     </p>
                     <p className="text-slate-400 text-sm">
                       {formatDate(item.updatedAt || item.createdAt)} • 
@@ -310,7 +368,7 @@ export default function DashboardOverview({ dashboardData }) {
                   </div>
                 </div>
                 <span className={`px-3 py-1 text-xs rounded-full border capitalize ${getStatusColor(item.status)}`}>
-                  {getStatusIcon(item.status)} {item.status}
+                  {getStatusIcon(item.status)} {item.status || 'N/A'}
                 </span>
               </div>
             ))

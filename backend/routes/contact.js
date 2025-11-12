@@ -52,7 +52,7 @@ const validateContact = [
 ];
 
 // POST /api/contact - Submit contact form
-router.post('/contact', contactRateLimit, validateContact, async (req, res) => {
+router.post('/contacts', contactRateLimit, validateContact, async (req, res) => {
   try {
     // Check for validation errors
     const errors = validationResult(req);

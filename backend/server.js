@@ -298,7 +298,7 @@ const server = app.listen(PORT, () => {
   console.log(`🔗 Health check: http://localhost:${PORT}/api/health`);
   console.log(`📁 Base upload directory: ${baseUploadDir}`);
   console.log(`📁 Consultation upload directory: ${consultationUploadDir}`);
-  console.log(`📝 Available endpoints:`);
+  console.log(`📝 Available endpoints:`); 
   console.log(`   - /api/health (Server status)`);
   console.log(`   - /api/copyright (Copyright services)`);
   console.log(`   - /api/contact (Contact forms)`);

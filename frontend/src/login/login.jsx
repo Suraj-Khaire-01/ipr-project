@@ -1,86 +1,90 @@
-import { useState } from "react"
-import { SignIn } from "@clerk/clerk-react"
-import { useNavigate } from "react-router-dom"
+import { useState } from "react";
+import { SignIn } from "@clerk/clerk-react";
+import { useNavigate } from "react-router-dom";
 
 export default function Login() {
-  const [activeTab, setActiveTab] = useState("client")
-  const [adminData, setAdminData] = useState({ username: "", password: "" })
-  const [error, setError] = useState("")
-  const [isLoading, setIsLoading] = useState(false)
-  const navigate = useNavigate()
+  const [activeTab, setActiveTab] = useState("client");
+  const [adminData, setAdminData] = useState({
+    username: "",
+    password: "",
+    otpSent: false,
+    otp: "",
+    enteredOtp: "",
+  });
+  const [error, setError] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const navigate = useNavigate();
 
-  // ✅ Temporary Admin API Check
-  const adminApiHandler = async (credentials) => {
-    const envUsername = import.meta.env.VITE_ADMIN_USERNAME
-    const envPassword = import.meta.env.VITE_ADMIN_PASSWORD
-
-    if (
-      credentials.username === envUsername &&
-      credentials.password === envPassword
-    ) {
-      return { ok: true, message: "Login successful" }
-    }
-    return { ok: false, message: "Invalid username or password" }
-  }
-
-  // ✅ Admin Login Handler
+  // ✅ Admin Login Handler with OTP
   const handleAdminLogin = async (e) => {
-  e.preventDefault()
-  setError("")
-  setIsLoading(true)
+    e.preventDefault();
+    setError("");
+    setIsLoading(true);
 
-  try {
-    const result = await adminApiHandler(adminData)
+    const envUsername = import.meta.env.VITE_ADMIN_USERNAME;
+    const envPassword = import.meta.env.VITE_ADMIN_PASSWORD;
 
-    if (result.ok) {
-      // Store authentication data in localStorage/sessionStorage
-      // Store the admin token
-      localStorage.setItem('adminToken', result.token || 'admin-authenticated');
-      
-      // Store admin session flag
-      localStorage.setItem('adminSession', 'true');
-      
-      // Optionally store admin info (without sensitive data)
-      if (result.adminInfo) {
-        localStorage.setItem('adminInfo', JSON.stringify({
-          id: result.adminInfo.id,
-          name: result.adminInfo.name,
-          email: result.adminInfo.email,
-          role: result.adminInfo.role || 'admin'
-        }));
+    try {
+      if (
+        adminData.username === envUsername &&
+        adminData.password === envPassword
+      ) {
+        // ✅ Generate OTP
+        const otp = Math.floor(100000 + Math.random() * 900000).toString();
+        setAdminData({ ...adminData, otp, otpSent: true });
+
+        // ✅ Send OTP via EmailJS
+        // ✅ Send OTP Email via EmailJS
+        await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            service_id: import.meta.env.VITE_EMAILJS_SERVICE_ID,
+            template_id: import.meta.env.VITE_EMAILJS_TEMPLATE_ID,
+            user_id: import.meta.env.VITE_EMAILJS_USER_ID,
+            template_params: {
+              to_email: import.meta.env.VITE_ADMIN_USERNAME,
+              subject: "Your Admin Login OTP",
+              message: `Your One-Time Password (OTP) is ${otp}. It is valid for 5 minutes.`,
+            },
+          }),
+        });
+
+
+        alert("✅ OTP sent to your admin email");
+      } else {
+        setError("Invalid username or password");
       }
-
-      alert("✅ Admin logged in successfully")
-      
-      // Navigate to admin dashboard or return URL
-      const returnUrl = location.state?.from || "/admin-dashboard";
-      navigate(returnUrl);
-      
-    } else {
-      setError(result.message)
+    } catch (error) {
+      console.error("OTP send error:", error);
+      setError("Something went wrong while sending OTP");
+    } finally {
+      setIsLoading(false);
     }
-  } catch (error) {
-    console.error("Admin login error:", error)
-    setError("Something went wrong")
-  } finally {
-    setIsLoading(false)
-  }
-}
+  };
 
-// Also add a logout function
-const handleAdminLogout = () => {
-  // Clear all admin authentication data
-  localStorage.removeItem('adminToken');
-  localStorage.removeItem('adminSession');
-  localStorage.removeItem('adminInfo');
-  sessionStorage.removeItem('adminToken');
-  sessionStorage.removeItem('adminSession');
-  sessionStorage.removeItem('adminInfo');
-  
-  // Navigate to login page
-  navigate('/login');
-  alert('✅ Logged out successfully');
-};
+  // ✅ OTP Verification Handler
+  const handleVerifyOtp = (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (adminData.enteredOtp === adminData.otp) {
+      localStorage.setItem("adminSession", "true");
+      localStorage.setItem("adminToken", "secure-admin-auth");
+      alert("✅ Admin verified successfully");
+      navigate("/admin-dashboard");
+    } else {
+      setError("Invalid OTP. Please try again.");
+    }
+  };
+
+  // ✅ Admin Logout Function
+  const handleAdminLogout = () => {
+    localStorage.removeItem("adminToken");
+    localStorage.removeItem("adminSession");
+    alert("✅ Logged out successfully");
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
@@ -117,18 +121,16 @@ const handleAdminLogout = () => {
           {/* Tabs */}
           <div className="relative flex mb-8 p-1 bg-white/5 rounded-2xl border border-white/10">
             <div
-              className={`absolute top-1 bottom-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl transition-all duration-300 ease-out ${
-                activeTab === "client"
+              className={`absolute top-1 bottom-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl transition-all duration-300 ease-out ${activeTab === "client"
                   ? "left-1 right-1/2 mr-0.5"
                   : "right-1 left-1/2 ml-0.5"
-              }`}
+                }`}
             />
             <button
-              className={`relative flex-1 py-3 text-center font-semibold rounded-xl transition-all duration-300 ${
-                activeTab === "client"
+              className={`relative flex-1 py-3 text-center font-semibold rounded-xl transition-all duration-300 ${activeTab === "client"
                   ? "text-white"
                   : "text-slate-300 hover:text-white"
-              }`}
+                }`}
               onClick={() => setActiveTab("client")}
             >
               <span className="flex items-center justify-center gap-2">
@@ -149,11 +151,10 @@ const handleAdminLogout = () => {
               </span>
             </button>
             <button
-              className={`relative flex-1 py-3 text-center font-semibold rounded-xl transition-all duration-300 ${
-                activeTab === "admin"
+              className={`relative flex-1 py-3 text-center font-semibold rounded-xl transition-all duration-300 ${activeTab === "admin"
                   ? "text-white"
                   : "text-slate-300 hover:text-white"
-              }`}
+                }`}
               onClick={() => setActiveTab("admin")}
             >
               <span className="flex items-center justify-center gap-2">
@@ -175,7 +176,7 @@ const handleAdminLogout = () => {
             </button>
           </div>
 
-          {/* Client Login */}
+          {/* ✅ Client Login (Unchanged) */}
           {activeTab === "client" && (
             <div className="animate-fadeIn flex justify-center">
               <div className="w-full max-w-md">
@@ -186,36 +187,6 @@ const handleAdminLogout = () => {
                       rootBox: "w-full flex justify-center",
                       formButtonPrimary:
                         "bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transition-all duration-300 rounded-xl py-3 w-full",
-                      formFieldInput:
-                        "bg-white/10 border-white/20 text-white placeholder:text-slate-300 rounded-xl backdrop-blur-sm focus:bg-white/20 focus:border-purple-400 w-full",
-                      formFieldLabel: "text-slate-200 font-medium",
-                      headerTitle: "text-white text-xl font-bold text-center",
-                      headerSubtitle: "text-slate-300 text-center",
-                      socialButtonsBlockButton:
-                        "bg-white/10 border-white/20 text-white hover:bg-white/20 rounded-xl backdrop-blur-sm w-full",
-                      dividerLine: "bg-white/20",
-                      dividerText: "text-slate-300",
-                      footerActionLink: "text-purple-400 hover:text-purple-300",
-                      identityPreviewText: "text-slate-300",
-                      formResendCodeLink:
-                        "text-purple-400 hover:text-purple-300",
-                      alertText: "text-red-300",
-                      formFieldSuccessText: "text-green-300",
-                      form: "w-full space-y-4",
-                      formField: "w-full",
-                      socialButtonsBlock: "w-full",
-                      main: "w-full",
-                    },
-                    variables: {
-                      colorPrimary: "#8b5cf6",
-                      colorText: "#ffffff",
-                      colorTextSecondary: "#cbd5e1",
-                      colorBackground: "transparent",
-                      colorInputBackground: "rgba(255,255,255,0.1)",
-                      colorInputText: "#ffffff",
-                    },
-                    layout: {
-                      logoPlacement: "inside",
                     },
                   }}
                 />
@@ -223,74 +194,111 @@ const handleAdminLogout = () => {
             </div>
           )}
 
-          {/* Admin Login */}
+          {/* ✅ Admin Login with OTP */}
           {activeTab === "admin" && (
             <div className="animate-fadeIn">
-              <form onSubmit={handleAdminLogin} className="space-y-6">
-                <div className="space-y-4">
-                  {/* Username */}
-                  <div className="group">
-                    <label className="block text-sm font-semibold text-slate-200 mb-2">
-                      Username
-                    </label>
-                    <div className="relative">
+              {!adminData.otpSent ? (
+                <form onSubmit={handleAdminLogin} className="space-y-6">
+                  <div className="space-y-4">
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-slate-200 mb-2">
+                        Username
+                      </label>
                       <input
                         type="text"
                         value={adminData.username}
                         onChange={(e) =>
-                          setAdminData({ ...adminData, username: e.target.value })
+                          setAdminData({
+                            ...adminData,
+                            username: e.target.value,
+                          })
                         }
-                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 text-white placeholder:text-slate-300 rounded-xl backdrop-blur-sm focus:bg-white/20 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all duration-300 outline-none"
+                        className="w-full py-3 px-4 bg-white/10 border border-white/20 text-white rounded-xl backdrop-blur-sm focus:bg-white/20 focus:border-purple-400 outline-none"
                         placeholder="Enter your username"
                         required
                       />
                     </div>
-                  </div>
 
-                  {/* Password */}
-                  <div className="group">
-                    <label className="block text-sm font-semibold text-slate-200 mb-2">
-                      Password
-                    </label>
-                    <div className="relative">
+                    <div className="group">
+                      <label className="block text-sm font-semibold text-slate-200 mb-2">
+                        Password
+                      </label>
                       <input
                         type="password"
                         value={adminData.password}
                         onChange={(e) =>
-                          setAdminData({ ...adminData, password: e.target.value })
+                          setAdminData({
+                            ...adminData,
+                            password: e.target.value,
+                          })
                         }
-                        className="w-full pl-10 pr-4 py-3 bg-white/10 border border-white/20 text-white placeholder:text-slate-300 rounded-xl backdrop-blur-sm focus:bg-white/20 focus:border-purple-400 focus:ring-2 focus:ring-purple-400/20 transition-all duration-300 outline-none"
+                        className="w-full py-3 px-4 bg-white/10 border border-white/20 text-white rounded-xl backdrop-blur-sm focus:bg-white/20 focus:border-purple-400 outline-none"
                         placeholder="Enter your password"
                         required
                       />
                     </div>
                   </div>
-                </div>
 
-                {/* Error */}
-                {error && (
-                  <div className="bg-red-500/10 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl backdrop-blur-sm animate-shake">
-                    {error}
+                  {error && (
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl backdrop-blur-sm animate-shake">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white py-3 rounded-xl font-semibold shadow-lg transition-all duration-300"
+                  >
+                    {isLoading ? "Sending OTP..." : "Login & Send OTP"}
+                  </button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOtp} className="space-y-6">
+                  <div className="group">
+                    <label className="block text-sm font-semibold text-slate-200 mb-2">
+                      Enter OTP sent to your email
+                    </label>
+                    <input
+                      type="text"
+                      maxLength="6"
+                      value={adminData.enteredOtp}
+                      onChange={(e) =>
+                        setAdminData({
+                          ...adminData,
+                          enteredOtp: e.target.value,
+                        })
+                      }
+                      className="w-full py-3 px-4 bg-white/10 border border-white/20 text-white rounded-xl backdrop-blur-sm focus:bg-white/20 focus:border-purple-400 outline-none"
+                      placeholder="6-digit OTP"
+                      required
+                    />
                   </div>
-                )}
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 disabled:from-slate-600 disabled:to-slate-600 text-white py-3 px-4 rounded-xl font-semibold shadow-lg hover:shadow-xl disabled:shadow-none transition-all duration-300 transform hover:scale-[1.02] disabled:scale-100 focus:ring-2 focus:ring-purple-400/50 outline-none"
-                >
-                  {isLoading ? "Signing in..." : "Admin Login"}
-                </button>
-              </form>
+                  {error && (
+                    <div className="bg-red-500/10 border border-red-500/20 text-red-300 px-4 py-3 rounded-xl backdrop-blur-sm animate-shake">
+                      {error}
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white py-3 rounded-xl font-semibold shadow-lg transition-all duration-300"
+                  >
+                    Verify OTP
+                  </button>
+                </form>
+              )}
             </div>
           )}
         </div>
 
         <div className="text-center mt-6 text-slate-400">
-          <p className="text-sm">Secure login powered by advanced authentication</p>
+          <p className="text-sm">
+            Secure login powered by advanced authentication
+          </p>
         </div>
       </div>
     </div>
-  )
+  );
 }

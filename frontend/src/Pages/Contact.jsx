@@ -71,108 +71,118 @@ function Contact() {
 
   // Handle form submission
   const handleSubmit = async (e) => {
-    e.preventDefault()
-    
-    // Prevent multiple rapid submissions
-    if (loading) return
+  e.preventDefault()
+  
+  // Prevent multiple rapid submissions
+  if (loading) return
 
-    setLoading(true)
-    setError('')
-    setSuccess(false)
-    setValidationErrors({})
+  setLoading(true)
+  setError('')
+  setSuccess(false)
+  setValidationErrors({})
 
-    // Client-side validation
-    const errors = validateForm()
-    if (Object.keys(errors).length > 0) {
-      setValidationErrors(errors)
-      setLoading(false)
-      return
+  // Client-side validation
+  const errors = validateForm()
+  if (Object.keys(errors).length > 0) {
+    setValidationErrors(errors)
+    setLoading(false)
+    return
+  }
+
+  // Check submission rate limit (client-side)
+  if (submitCount >= 100) {
+    setError('You have submitted too many forms. Please wait a moment before trying again.')
+    setLoading(false)
+    return
+  }
+
+  try {
+    // Prepare data - convert empty strings to undefined for optional fields
+    const submissionData = {
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim().toLowerCase(),
+      phone: formData.phone?.trim() || undefined, // Convert empty string to undefined
+      company: formData.company?.trim() || undefined, // Convert empty string to undefined
+      serviceType: formData.serviceType,
+      message: formData.message.trim()
     }
 
-    // Check submission rate limit (client-side)
-    if (submitCount >= 3) {
-      setError('You have submitted too many forms. Please wait a moment before trying again.')
-      setLoading(false)
-      return
-    }
+    const response = await fetch(`${API_URL}/contact`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json'
+      },
+      body: JSON.stringify(submissionData)
+    })
 
-    try {
-      const response = await fetch(`${API_URL}/contact`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-          fullName: formData.fullName.trim(),
-          email: formData.email.trim().toLowerCase(),
-          phone: formData.phone ? formData.phone.trim() : '',
-          company: formData.company ? formData.company.trim() : '',
-          serviceType: formData.serviceType,
-          message: formData.message.trim()
-        })
+    const data = await response.json()
+
+    if (response.ok && data.success) {
+      // Success
+      setSuccess(true)
+      setSubmitCount(prev => prev + 1)
+      
+      // Reset form
+      setFormData({ 
+        fullName: '', 
+        email: '', 
+        phone: '', 
+        company: '', 
+        serviceType: '', 
+        message: '' 
       })
-
-      const data = await response.json()
-
-      if (response.ok && data.success) {
-        // Success
-        setSuccess(true)
-        setSubmitCount(prev => prev + 1)
-        
-        // Reset form
-        setFormData({ 
-          fullName: '', 
-          email: '', 
-          phone: '', 
-          company: '', 
-          serviceType: '', 
-          message: '' 
+      
+      // Auto-hide success message after 10 seconds
+      setTimeout(() => setSuccess(false), 10000)
+      
+      // Log success for analytics (optional)
+      console.log('Contact form submitted successfully:', data.data?.id)
+      
+    } else {
+      // Handle API errors
+      if (data.details && Array.isArray(data.details)) {
+        // Server validation errors
+        const serverErrors = {}
+        data.details.forEach(detail => {
+          const lowerDetail = detail.toLowerCase()
+          if (lowerDetail.includes('name') || lowerDetail.includes('fullname')) {
+            serverErrors.fullName = detail
+          } else if (lowerDetail.includes('email')) {
+            serverErrors.email = detail
+          } else if (lowerDetail.includes('phone')) {
+            serverErrors.phone = detail
+          } else if (lowerDetail.includes('company')) {
+            serverErrors.company = detail
+          } else if (lowerDetail.includes('service')) {
+            serverErrors.serviceType = detail
+          } else if (lowerDetail.includes('message')) {
+            serverErrors.message = detail
+          } else {
+            // For any other errors, show as general error
+            setError(detail)
+          }
         })
-        
-        // Auto-hide success message after 10 seconds
-        setTimeout(() => setSuccess(false), 10000)
-        
-        // Log success for analytics (optional)
-        console.log('Contact form submitted successfully:', data.data?.id)
-        
-      } else {
-        // Handle API errors
-        if (data.details && Array.isArray(data.details)) {
-          // Server validation errors
-          const serverErrors = {}
-          data.details.forEach(detail => {
-            const lowerDetail = detail.toLowerCase()
-            if (lowerDetail.includes('name') || lowerDetail.includes('fullname')) {
-              serverErrors.fullName = detail
-            } else if (lowerDetail.includes('email')) {
-              serverErrors.email = detail
-            } else if (lowerDetail.includes('phone')) {
-              serverErrors.phone = detail
-            } else if (lowerDetail.includes('service')) {
-              serverErrors.serviceType = detail
-            } else if (lowerDetail.includes('message')) {
-              serverErrors.message = detail
-            }
-          })
+        if (Object.keys(serverErrors).length > 0) {
           setValidationErrors(serverErrors)
         }
-        
-        setError(data.error || 'Failed to send message. Please try again.')
       }
       
-    } catch (err) {
-      console.error('Contact form submission error:', err)
-      
-      if (err.name === 'TypeError' && err.message.includes('fetch')) {
-        setError('Unable to connect to server. Please check your internet connection and try again.')
-      } else {
-        setError('An unexpected error occurred. Please try again later.')
-      }
-    } finally {
-      setLoading(false)
+      setError(data.error || 'Failed to send message. Please try again.')
     }
+    
+  } catch (err) {
+    console.error('Contact form submission error:', err)
+    
+    if (err.name === 'TypeError' && err.message.includes('fetch')) {
+      setError('Unable to connect to server. Please check your internet connection and try again.')
+    } else {
+      setError('An unexpected error occurred. Please try again later.')
+    }
+  } finally {
+    setLoading(false)
   }
+}
 
   // Handle input changes
   const handleChange = (e) => {
@@ -202,7 +212,7 @@ function Contact() {
     if (submitCount > 0) {
       const timer = setTimeout(() => {
         setSubmitCount(0)
-      }, 60 * 60 * 1000) // 1 hour
+      }, 60 * 60 * 10000) // 1 hour
 
       return () => clearTimeout(timer)
     }

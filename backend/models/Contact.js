@@ -1,10 +1,7 @@
 const mongoose = require('mongoose');
 
 const contactSchema = new mongoose.Schema({
-  clerkUserId: {
-    type: String,
-    required: true
-  },
+  
   fullName: {
     type: String,
     required: [true, 'Full name is required'],
