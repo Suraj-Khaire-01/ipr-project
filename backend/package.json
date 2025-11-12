@@ -35,7 +35,7 @@
     "morgan": "^1.10.0",
     "multer": "^1.4.5-lts.1",
     "nodemailer": "^6.9.7",
-    "path-to-regexp": "^0.1.7",
+    "path-to-regexp": "^8.3.0",
     "razorpay": "^2.9.6",
     "twilio": "^5.10.5",
     "uuid": "^11.1.0",
