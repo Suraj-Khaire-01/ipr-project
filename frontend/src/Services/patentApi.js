@@ -21,20 +21,23 @@ export const patentApi = {
   updatePatent: (id, patentData) => api.put(`/patents/${id}`, patentData),
   
   // Update step
-  updateStep: (id, step) => api.patch(`/patents/${id}/step`, { step }),
+  updateStep: (id, step) => 
+    api.patch(`/patents/${id}/step`, { step }),
   
   // Upload technical drawings
-  uploadTechnicalDrawings: (id, formData) => api.post(`/patents/${id}/technical-drawings`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
+  uploadTechnicalDrawings: (id, formData) =>
+    api.post(`/patents/${id}/technical-drawings`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
   
   // Upload supporting documents
-  uploadSupportingDocuments: (id, formData) => api.post(`/patents/${id}/supporting-documents`, formData, {
-    headers: { 'Content-Type': 'multipart/form-data' }
-  }),
+  uploadSupportingDocuments: (id, formData) =>
+    api.post(`/patents/${id}/supporting-documents`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    }),
   
   // Update completed documents
-  updateCompletedDocuments: (id, documentId, completed) => 
+  updateCompletedDocuments: (id, documentId, completed) =>
     api.patch(`/patents/${id}/completed-documents`, { documentId, completed })
 };
 
