@@ -91,12 +91,20 @@ mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ip_secure
   });
 
 // Health check route
-app.get('/api/health', (req, res) => {
+app.get('/', (req, res) => {
   res.json({
     success: true,
-    message: 'Server is running',
-    timestamp: new Date().toISOString(),
-    environment: process.env.NODE_ENV || 'development',
+    message: 'API is running',
+    availableEndpoints: [
+      '/api/health',
+      '/api/send-otp',
+      '/api/send-admin-otp',
+      '/api/verify-admin-otp',
+      '/api/copyright',
+      '/api/contact',
+      '/api/patents',
+      '/api/consultations'
+    ]
   });
 });
 
