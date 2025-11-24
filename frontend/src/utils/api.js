@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api'
+const API_BASE = 'https://ipr-project.onrender.com/'
 
 class APIClient {
   constructor(baseURL) {
