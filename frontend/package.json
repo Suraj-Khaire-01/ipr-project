@@ -12,7 +12,6 @@
   "dependencies": {
     "@clerk/clerk-react": "^5.42.0",
     "@tailwindcss/vite": "^4.1.11",
-    "@tomtom-international/web-sdk-maps": "^6.25.0",
     "axios": "^1.11.0",
     "lucide-react": "^0.539.0",
     "razorpay": "^2.9.6",
