@@ -245,4 +245,9 @@ const server = app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`🧩 Twilio 2FA active: /api/send-admin-otp, /api/verify-admin-otp`);
 });
+
+app.get("/", (req, res) => {
+  res.json({ message: "IPR Backend API is running 🔥" });
+});
+
 module.exports = app;
