@@ -123,10 +123,10 @@ export default function Analytics() {
     try {
       // Simulate API calls - replace with actual endpoints
       const responses = await Promise.all([
-        fetch('http://localhost:3001/api/patents').catch(() => ({ json: () => ({ success: false, data: [] }) })),
-        fetch('http://localhost:3001/api/copyright').catch(() => ({ json: () => ({ success: false, data: [] }) })),
-        fetch('http://localhost:3001/api/contacts').catch(() => ({ json: () => ({ success: false, data: [] }) })),
-        fetch('http://localhost:3001/api/consultations').catch(() => ({ json: () => ({ success: false, data: [] }) }))
+        fetch(`${backend_url}/api/patents`).catch(() => ({ json: () => ({ success: false, data: [] }) })),
+        fetch(`${backend_url}/api/copyright`).catch(() => ({ json: () => ({ success: false, data: [] }) })),
+        fetch(`${backend_url}/api/contacts`).catch(() => ({ json: () => ({ success: false, data: [] }) })),
+        fetch(`${backend_url}/api/consultations`).catch(() => ({ json: () => ({ success: false, data: [] }) }))
       ]);
 
       const results = await Promise.all(responses.map(r => r.json()));
