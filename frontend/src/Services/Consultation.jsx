@@ -125,7 +125,7 @@ const Consultation = () => {
       });
 
       // Make API call
-      const response = await fetch('http://localhost:3001/api/consultations', {
+      const response = await fetch('https://ipr-project-kojs.onrender.com/api/consultations', {
         method: 'POST',
         body: submitData,
       });
