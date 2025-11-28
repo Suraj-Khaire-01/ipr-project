@@ -15,7 +15,7 @@ export default function ContactRequests() {
       setLoading(true);
       setError(null);
 
-      const response = await fetch('http://localhost:3001/api/contacts', {
+      const response = await fetch(`${backend_url}/api/contacts`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -145,7 +145,7 @@ export default function ContactRequests() {
 
       const dbStatus = dbStatusMap[newStatus] || newStatus;
 
-      const response = await fetch(`http://localhost:3001/api/contacts/${id}`, {
+      const response = await fetch(`${backend_url}/api/contacts/${id}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
