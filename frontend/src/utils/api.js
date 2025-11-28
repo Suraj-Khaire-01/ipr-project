@@ -1,4 +1,4 @@
-const API_BASE = 'https://ipr-project-kojs.onrender.com/api'
+const API_BASE = 'https://ipr-project-kojs.onrender.com/'
 
 class APIClient {
   constructor(baseURL) {
