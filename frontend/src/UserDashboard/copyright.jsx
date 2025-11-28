@@ -15,7 +15,8 @@ export default function DashboardCopyright({ handleView, handleDelete, handleDow
     setError(null);
     
     try {
-      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/copyright/user/${user.id}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/copyright/user/${user.id}`);
       const result = await response.json();
       
       if (result.success) {
@@ -87,7 +88,8 @@ export default function DashboardCopyright({ handleView, handleDelete, handleDow
 
   const handleDownloadCertificate = async (copyrightId) => {
     try {
-      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/copyright/${copyrightId}/certificate`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/copyright/${copyrightId}/certificate`);
       const data = await response.json();
 
       if (data.success && data.certificateUrl) {
@@ -107,7 +109,8 @@ export default function DashboardCopyright({ handleView, handleDelete, handleDow
     }
 
     try {
-      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/copyright/${copyrightId}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/copyright/${copyrightId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

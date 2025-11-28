@@ -13,7 +13,7 @@ import {
 import { useUser } from '@clerk/clerk-react';
 
 // API service functions
-const API_BASE_URL = 'https://ipr-project-kojs.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
 const patentAPI = {
   createPatent: async (patentData) => {

@@ -34,15 +34,16 @@ export default function UserDashboard() {
     
     try {
       // Fetch user's patents with detailed status information
-      const patentsResponse = await fetch(`https://ipr-project-kojs.onrender.com/api/user/${user.id}/patents`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const patentsResponse = await fetch(`${apiUrl}/user/${user.id}/patents`);
       const patentsResult = await patentsResponse.json();
       
       // Fetch user's copyrights with detailed status information
-      const copyrightsResponse = await fetch(`https://ipr-project-kojs.onrender.com/api/user/${user.id}/copyright`);
+      const copyrightsResponse = await fetch(`${apiUrl}/user/${user.id}/copyright`);
       const copyrightsResult = await copyrightsResponse.json();
       
       // Fetch user's consultations with detailed status information
-      const consultationsResponse = await fetch(`https://ipr-project-kojs.onrender.com/api/user/${user.id}/consulation`);
+      const consultationsResponse = await fetch(`${apiUrl}/user/${user.id}/consulation`);
       const consultationsResult = await consultationsResponse.json();
       
       setDashboardData({
@@ -67,7 +68,8 @@ export default function UserDashboard() {
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
-      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/user/${user.id}/${type}/${id}`, {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/user/${user.id}/${type}/${id}`, {
         method: 'DELETE',
       });
 
@@ -85,7 +87,8 @@ export default function UserDashboard() {
 
   const handleDownload = async (id, type) => {
     try {
-      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/user/${user.id}/${type}/${id}/download`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/user/${user.id}/${type}/${id}/download`);
       
       if (response.ok) {
         const blob = await response.blob();

@@ -15,7 +15,8 @@ export default function DashboardConsultation({ handleView, handleDelete }) {
     setError(null);
     
     try {
-      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/consultations/user/${user.id}`);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/consultations/user/${user.id}`);
       const result = await response.json();
       
       if (result.success) {

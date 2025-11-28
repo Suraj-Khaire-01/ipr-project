@@ -125,7 +125,8 @@ const Consultation = () => {
       });
 
       // Make API call
-      const response = await fetch('http://localhost:3001/api/consultations', {
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
+      const response = await fetch(`${apiUrl}/consultations`, {
         method: 'POST',
         body: submitData,
       });

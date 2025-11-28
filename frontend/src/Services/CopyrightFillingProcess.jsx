@@ -175,7 +175,7 @@ export default function CopyrightFillingProcess() {
   const [errorMessage, setErrorMessage] = useState('');
 
   // Adjust this base if your backend runs on a different host/port
-  const API_BASE = 'http://localhost:3001/api';
+  const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:3001/api';
 
   // Get Clerk user ID from authentication
   const getClerkUserId = () => {
