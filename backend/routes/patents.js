@@ -383,8 +383,8 @@ router.put('/:id', async (req, res) => {
 // @access  Private
 router.delete('/:id', async (req, res) => {
   try {
-    const { clerkUserId } = req.body;
-    
+    const { clerkUserId, isAdmin } = req.body; // ⬅ get isAdmin flag
+
     const patent = await Patent.findOne({
       $or: [
         { _id: req.params.id },
@@ -399,16 +399,25 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    // Verify ownership
-    if (clerkUserId && patent.clerkUserId !== clerkUserId) {
+    // 🛑 Normal user: check ownership
+    if (!isAdmin && clerkUserId && patent.clerkUserId !== clerkUserId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. You can only delete your own applications.'
       });
     }
 
+    // 🔥 Admin override → skip user ownership check
+    if (isAdmin) {
+      console.log("🛑 Admin override: deleting patent without user ownership check");
+    }
+
     // Delete associated files
-    const allFiles = [...(patent.technicalDrawings || []), ...(patent.supportingDocuments || [])];
+    const allFiles = [
+      ...(patent.technicalDrawings || []),
+      ...(patent.supportingDocuments || [])
+    ];
+
     allFiles.forEach(file => {
       try {
         if (fs.existsSync(file.path)) {
@@ -426,6 +435,7 @@ router.delete('/:id', async (req, res) => {
       success: true,
       message: 'Patent application deleted successfully'
     });
+
   } catch (error) {
     console.error('Error deleting patent:', error);
     res.status(500).json({

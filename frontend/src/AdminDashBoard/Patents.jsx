@@ -68,31 +68,41 @@ export default function Patents() {
     }
   };
 
-  const handleDeletePatent = async (id) => {
-    if (window.confirm('Are you sure you want to delete this patent application?')) {
-      try {
-        const response = await fetch(`${backend_url}/api/patents/${id}`, {
-          method: 'DELETE',
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          setPatents(prev => prev.filter(patent => patent._id !== id));
-          if (selectedPatent && selectedPatent._id === id) {
-            setSelectedPatent(null);
-            setShowModal(false);
-          }
-        } else {
-          console.error('Failed to delete patent:', result.message);
-          alert('Failed to delete patent');
+ const handleDeletePatent = async (id) => {
+  if (window.confirm("Are you sure you want to delete this patent application?")) {
+    try {
+      const response = await fetch(`${backend_url}/api/patents/${id}`, {
+        method: "DELETE",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          isAdmin: true     // 👈 REQUIRED for admin override delete
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setPatents(prev => prev.filter(patent => patent._id !== id));
+
+        if (selectedPatent && selectedPatent._id === id) {
+          setSelectedPatent(null);
+          setShowModal(false);
         }
-      } catch (error) {
-        console.error('Error deleting patent:', error);
-        alert('Error deleting patent');
+
+        alert("Patent application deleted successfully");
+      } else {
+        console.error("Failed to delete patent:", result.message);
+        alert(result.message || "Failed to delete patent");
       }
+    } catch (error) {
+      console.error("Error deleting patent:", error);
+      alert("Error deleting patent");
     }
-  };
+  }
+};
+
 
   const getStatusColor = (status) => {
     switch (status) {
