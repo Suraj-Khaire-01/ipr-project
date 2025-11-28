@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useUser } from "@clerk/clerk-react";
-
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 export default function DashboardCopyright({ handleView, handleDelete, handleDownload }) {
   const { user } = useUser();
   const [copyrights, setCopyrights] = useState([]);
@@ -15,7 +15,7 @@ export default function DashboardCopyright({ handleView, handleDelete, handleDow
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:3001/api/copyright/user/${user.id}`);
+      const response = await fetch(`${backend_url}/api/copyright/user/${user.id}`);
       const result = await response.json();
       
       if (result.success) {
@@ -87,7 +87,7 @@ export default function DashboardCopyright({ handleView, handleDelete, handleDow
 
   const handleDownloadCertificate = async (copyrightId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/copyright/${copyrightId}/certificate`);
+      const response = await fetch(`${backend_url}/api/copyright/${copyrightId}/certificate`);
       const data = await response.json();
 
       if (data.success && data.certificateUrl) {
@@ -107,7 +107,7 @@ export default function DashboardCopyright({ handleView, handleDelete, handleDow
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/copyright/${copyrightId}`, {
+      const response = await fetch(`${backend_url}/api/copyright/${copyrightId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
-const API_BASE = 'https://ipr-project.onrender.com/api'
+const backend_url = import.meta.env.VITE_BACKEND_URL;
+const API_BASE = `${backend_url}/api`
 
 class APIClient {
   constructor(baseURL) {

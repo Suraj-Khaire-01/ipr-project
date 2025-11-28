@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { SignIn } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
-
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 export default function Login() {
   const [activeTab, setActiveTab] = useState("client");
   const [adminData, setAdminData] = useState({
@@ -38,7 +38,7 @@ export default function Login() {
       const result = await adminApiHandler(adminData);
       if (result.ok) {
         // ✅ Send OTP via backend (Twilio)
-        const res = await fetch("http://localhost:3001/api/send-admin-otp", {
+        const res = await fetch(`${backend_url}/api/send-admin-otp`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ phone: adminData.phone }),
@@ -68,7 +68,7 @@ export default function Login() {
     setError("");
 
     try {
-      const res = await fetch("http://localhost:3001/api/verify-admin-otp", {
+      const res = await fetch(`${backend_url}/api/verify-admin-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: adminData.phone, code: otpData }),

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useUser } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
-
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 // Import components from the UserDashboard folder
 import DashboardHeader from './header';
 import DashboardOverview from './overview';
@@ -34,15 +34,15 @@ export default function UserDashboard() {
     
     try {
       // Fetch user's patents with detailed status information
-      const patentsResponse = await fetch(`http://localhost:3001/api/user/${user.id}/patents`);
+      const patentsResponse = await fetch(`${backend_url}/api/user/${user.id}/patents`);
       const patentsResult = await patentsResponse.json();
       
       // Fetch user's copyrights with detailed status information
-      const copyrightsResponse = await fetch(`http://localhost:3001/api/user/${user.id}/copyright`);
+      const copyrightsResponse = await fetch(`${backend_url}/api/user/${user.id}/copyright`);
       const copyrightsResult = await copyrightsResponse.json();
       
       // Fetch user's consultations with detailed status information
-      const consultationsResponse = await fetch(`http://localhost:3001/api/user/${user.id}/consulation`);
+      const consultationsResponse = await fetch(`${backend_url}/api/user/${user.id}/consulation`);
       const consultationsResult = await consultationsResponse.json();
       
       setDashboardData({
@@ -67,7 +67,7 @@ export default function UserDashboard() {
     if (!confirm('Are you sure you want to delete this item?')) return;
 
     try {
-      const response = await fetch(`http://localhost:3001/api/user/${user.id}/${type}/${id}`, {
+      const response = await fetch(`${backend_url}/api/user/${user.id}/${type}/${id}`, {
         method: 'DELETE',
       });
 
@@ -85,7 +85,7 @@ export default function UserDashboard() {
 
   const handleDownload = async (id, type) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/user/${user.id}/${type}/${id}/download`);
+      const response = await fetch(`${backend_url}/api/user/${user.id}/${type}/${id}/download`);
       
       if (response.ok) {
         const blob = await response.blob();

@@ -1,6 +1,6 @@
 import axios from 'axios';
-
-const API_BASE_URL = 'https://ipr-project-kojs.onrender.com/api/';
+const backend_url = import.meta.env.VITE_BACKEND_URL;
+const API_BASE_URL = `${backend_url}/api/`;
 
 const api = axios.create({
   baseURL: API_BASE_URL,

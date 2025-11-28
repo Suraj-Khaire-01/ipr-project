@@ -1,3 +1,4 @@
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 import React, { useState } from 'react';
 import { useUser } from "@clerk/clerk-react"; // ADD THIS IMPORT
 import {
@@ -125,7 +126,7 @@ const Consultation = () => {
       });
 
       // Make API call
-      const response = await fetch('https://ipr-project.onrender.com/api/consultations', {
+      const response = await fetch(`${backend_url}/api/consultations`, {
         method: 'POST',
         body: submitData,
       });

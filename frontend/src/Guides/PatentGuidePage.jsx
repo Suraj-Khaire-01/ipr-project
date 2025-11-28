@@ -1,3 +1,4 @@
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 import React, { useState } from 'react';
 import { FileText, Upload, BookOpen, Search, AlertCircle, Award, Phone, Mail } from 'lucide-react';
 

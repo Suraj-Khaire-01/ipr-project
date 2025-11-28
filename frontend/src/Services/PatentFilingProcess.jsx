@@ -1,3 +1,4 @@
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 import React, { useState, useEffect } from 'react';
 import {
   Upload,
@@ -13,7 +14,7 @@ import {
 import { useUser } from '@clerk/clerk-react';
 
 // API service functions
-const API_BASE_URL = 'http://localhost:3001/api';
+const API_BASE_URL = `${backend_url}/api`;
 
 const patentAPI = {
   createPatent: async (patentData) => {

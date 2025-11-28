@@ -1,3 +1,4 @@
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 import { useEffect, useState } from 'react';
 
 export default function Patents() {
@@ -14,7 +15,7 @@ export default function Patents() {
   const fetchPatents = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/patents');
+      const response = await fetch(`${backend_url}/api/patents`);
       const result = await response.json();
       
       if (result.success) {
