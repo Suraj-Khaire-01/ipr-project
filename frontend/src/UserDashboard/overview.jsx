@@ -29,7 +29,7 @@ export default function DashboardOverview({ dashboardData }) {
       console.log('Fetching consultation data for user:', user.id);
       
       // Use the working endpoint to get all consultations
-      const consultationsResponse = await fetch(`http://localhost:3001/api/consultations/user/${user.id}?limit=100`);
+      const consultationsResponse = await fetch(`https://ipr-project-kojs.onrender.com/api/consultations/user/${user.id}?limit=100`);
       
       if (!consultationsResponse.ok) {
         throw new Error(`Consultations API failed with status: ${consultationsResponse.status}`);

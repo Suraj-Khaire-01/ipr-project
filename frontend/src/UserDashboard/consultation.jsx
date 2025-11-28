@@ -15,7 +15,7 @@ export default function DashboardConsultation({ handleView, handleDelete }) {
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:3001/api/consultations/user/${user.id}`);
+      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/consultations/user/${user.id}`);
       const result = await response.json();
       
       if (result.success) {

@@ -82,11 +82,12 @@ app.use('/uploads/consultations', express.static(consultationUploadDir));
 app.set('trust proxy', 1);
 
 // MongoDB connection
-mongoose.connect(process.env.MONGODB_URI || 'mongodb://localhost:27017/ip_secure_legal', {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-  .then(() => console.log('✅ Connected to MongoDB successfully'))
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/patentHold';
+mongoose.connect(MONGODB_URI)
+  .then(() => {
+    console.log('✅ Connected to MongoDB successfully');
+    console.log(`📊 Database: ${mongoose.connection.name}`);
+  })
   .catch((error) => {
     console.error('❌ MongoDB connection error:', error);
     process.exit(1);
@@ -110,15 +111,53 @@ app.get('/', (req, res) => {
   });
 });
 
+// Health check endpoint
+app.get('/api/health', async (req, res) => {
+  try {
+    const dbStatus = mongoose.connection.readyState === 1 ? 'connected' : 'disconnected';
+    res.json({
+      success: true,
+      message: 'Server is healthy',
+      status: 'ok',
+      database: dbStatus,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Health check failed',
+      error: error.message
+    });
+  }
+});
+
 
 // ✅ TWILIO 2FA ROUTES (NEW)
-const twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+// Initialize Twilio client only if credentials are available
+let twilioClient = null;
+if (process.env.TWILIO_ACCOUNT_SID && process.env.TWILIO_AUTH_TOKEN) {
+  try {
+    twilioClient = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
+    console.log('✅ Twilio client initialized');
+  } catch (error) {
+    console.warn('⚠️ Twilio client initialization failed:', error.message);
+  }
+} else {
+  console.warn('⚠️ Twilio credentials not found. OTP features will be limited.');
+}
 
 // Send OTP to admin phone
 app.post('/api/send-admin-otp', async (req, res) => {
   const { phone } = req.body;
   if (!phone) {
     return res.status(400).json({ success: false, message: 'Phone number is required' });
+  }
+
+  if (!twilioClient || !process.env.TWILIO_VERIFY_SID) {
+    return res.status(503).json({ 
+      success: false, 
+      message: 'OTP service is not configured. Please configure Twilio credentials.' 
+    });
   }
 
   try {
@@ -130,7 +169,11 @@ app.post('/api/send-admin-otp', async (req, res) => {
     res.json({ success: true, message: 'OTP sent successfully', sid: verification.sid });
   } catch (error) {
     console.error('❌ Twilio send-admin-otp error:', error);
-    res.status(500).json({ success: false, message: 'Failed to send OTP' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to send OTP',
+      error: error.message 
+    });
   }
 });
 
@@ -139,6 +182,13 @@ app.post('/api/verify-admin-otp', async (req, res) => {
   const { phone, code } = req.body;
   if (!phone || !code) {
     return res.status(400).json({ success: false, message: 'Phone and OTP code are required' });
+  }
+
+  if (!twilioClient || !process.env.TWILIO_VERIFY_SID) {
+    return res.status(503).json({ 
+      success: false, 
+      message: 'OTP service is not configured. Please configure Twilio credentials.' 
+    });
   }
 
   try {
@@ -154,7 +204,11 @@ app.post('/api/verify-admin-otp', async (req, res) => {
     }
   } catch (error) {
     console.error('❌ Twilio verify-admin-otp error:', error);
-    res.status(500).json({ success: false, message: 'OTP verification failed' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'OTP verification failed',
+      error: error.message 
+    });
   }
 });
 
@@ -164,6 +218,16 @@ app.post('/api/send-otp', async (req, res) => {
   const { email, otp } = req.body;
   if (!email || !otp) {
     return res.status(400).json({ success: false, message: 'Email and OTP required' });
+  }
+
+  if (!process.env.SMTP_EMAIL || !process.env.SMTP_APP_PASSWORD) {
+    console.warn('⚠️ SMTP credentials not configured. OTP email cannot be sent.');
+    // Return success but log that email wasn't actually sent
+    return res.json({ 
+      success: true, 
+      message: 'OTP service not configured. Email not sent.',
+      warning: 'SMTP credentials not configured'
+    });
   }
 
   try {
@@ -186,7 +250,11 @@ app.post('/api/send-otp', async (req, res) => {
     res.json({ success: true, message: 'OTP sent successfully' });
   } catch (error) {
     console.error('❌ OTP email error:', error);
-    res.status(500).json({ success: false, message: 'Failed to send OTP email' });
+    res.status(500).json({ 
+      success: false, 
+      message: 'Failed to send OTP email',
+      error: error.message 
+    });
   }
 });
 

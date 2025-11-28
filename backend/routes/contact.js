@@ -117,11 +117,20 @@ router.post('/contact', contactRateLimit, validateContact, async (req, res) => {
       });
     }
 
-    // Generic server error
+    // Handle CastError (invalid ObjectId, etc.)
+    if (error.name === 'CastError') {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid data format',
+        details: [error.message]
+      });
+    }
+
+    // Generic server error with more details in development
     res.status(500).json({
       success: false,
       error: 'Internal server error. Please try again later.',
-      details: ['Server error occurred']
+      details: process.env.NODE_ENV === 'development' ? [error.message] : ['Server error occurred']
     });
   }
 });

@@ -18,7 +18,7 @@ export default function UserPatents({ handleView, handleDelete, handleDownload }
     setError(null);
     
     try {
-      const response = await fetch(`http://localhost:3001/api/patents/user/${user.id}`);
+      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/patents/user/${user.id}`);
       
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -146,7 +146,7 @@ export default function UserPatents({ handleView, handleDelete, handleDownload }
 
   const handleDownloadCertificate = async (patentId) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/patent/${patentId}/certificate`);
+      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/patent/${patentId}/certificate`);
       const data = await response.json();
 
       if (data.success && data.certificateUrl) {
@@ -166,7 +166,7 @@ export default function UserPatents({ handleView, handleDelete, handleDownload }
     }
 
     try {
-      const response = await fetch(`http://localhost:3001/api/patent/${patentId}`, {
+      const response = await fetch(`https://ipr-project-kojs.onrender.com/api/patent/${patentId}`, {
         method: 'DELETE',
         headers: {
           'Content-Type': 'application/json',

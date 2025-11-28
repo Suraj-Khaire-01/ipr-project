@@ -17,7 +17,7 @@ function Contact() {
   const [submitCount, setSubmitCount] = useState(0)
 
   // Get API URL from environment or use default
-  const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
+  const API_URL = import.meta.env.REACT_APP_API_URL || 'http://localhost:3001/api'
 
   // Form validation function
   const validateForm = () => {

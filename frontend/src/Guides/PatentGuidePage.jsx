@@ -40,7 +40,7 @@ const PatentGuidePage = () => {
     (async () => {
       setSubmitting(true);
       try {
-        const res = await fetch('http://localhost:3001/api/contact/contact', {
+        const res = await fetch('https://ipr-project-kojs.onrender.com/api/contact/contact', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
