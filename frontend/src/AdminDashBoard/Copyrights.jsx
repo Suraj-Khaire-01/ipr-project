@@ -14,7 +14,7 @@ export default function Copyrights() {
   const fetchCopyrights = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch('http://localhost:3001/api/copyright');
+      const response = await fetch(`${backend_url}/api/copyright`);
       const result = await response.json();
       
       if (result.success) {
@@ -39,7 +39,7 @@ export default function Copyrights() {
 
   const handleUpdateStatus = async (id, status) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/copyright/${id}`, {
+      const response = await fetch(`${backend_url}/api/copyright/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export default function Copyrights() {
   const handleDeleteCopyright = async (id) => {
     if (window.confirm('Are you sure you want to delete this copyright application?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/copyright/${id}`, {
+        const response = await fetch(`${backend_url}/api/copyright/${id}`, {
           method: 'DELETE',
         });
         
@@ -416,7 +416,7 @@ export default function Copyrights() {
                           </div>
                         </div>
                         <a
-                          href={`http://localhost:3001/${file.path}`}
+                          href={`${backend_url}/${file.path}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-400 hover:text-blue-300 text-sm px-3 py-1 bg-blue-500/20 rounded transition-colors"
