@@ -1,7 +1,7 @@
 import { Award, CheckCircle, Search, Upload, Download, Info } from 'lucide-react';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useUser } from '@clerk/clerk-react'; // Import Clerk hook
-
+const backend_url = import.meta.env.VITE_BACKEND_URL;
 // Top-level memoized WorkDetails component to avoid remounting issues
 const WorkDetails = memo(({ formData, onChange }) => (
   <div className="bg-gray-800 rounded-lg p-8">
