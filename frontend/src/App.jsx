@@ -2,7 +2,6 @@ import { Routes, Route, useLocation } from 'react-router-dom'
 import Navbar from './Components/Navbar'
 import Footer from './Components/Footer'
 import Home from './Pages/Home'
-// import Dashboard from './Pages/Dashboard'
 import Dashboard from './UserDashboard'
 import AdminDashboard from './Pages/AdminDashboard'
 import Contact from './Pages/Contact'
@@ -21,7 +20,7 @@ import IPLitigationPage from './Services/IPLitigationPage'
 import Login from './login/login'
 import PatentGuidePage from './Guides/PatentGuidePage'
 import CopyrightGuidePage from './Guides/CopyrightGuidePage'
-import { ThemeProvider } from './Components/ThemeProvider'  // ✅ path updated
+import { ThemeProvider } from './Components/ThemeProvider'
 
 function App() {
   const location = useLocation()
@@ -29,12 +28,11 @@ function App() {
   const hideFooterRoutes = ["/admin-dashboard", "/admindashboard", "/login"]
 
   return (
-    <ThemeProvider defaultTheme="light"> {/* ✅ wrap everything with ThemeProvider */}
+    <ThemeProvider defaultTheme="light">
       <div className="flex flex-col min-h-screen bg-gray-50 hide-scrollbar overflow-auto h-screen">
         {!hideLayoutRoutes.includes(location.pathname) && <Navbar />}
 
         <main className="flex-grow">
-          {/* ✅ Force re-render of routes when path changes */}
           <Routes key={location.pathname}>
             {/* PUBLIC ROUTE */}
             <Route path="/" element={<Home />} />
@@ -49,7 +47,7 @@ function App() {
               element={<ProtectRoute><AdminDashboard /></ProtectRoute>}
             />
 
-            {/* All Services Protected */}
+            {/* Services */}
             <Route
               path="/patentservice"
               element={<ProtectRoute><PatentServicesPage /></ProtectRoute>}
@@ -58,10 +56,7 @@ function App() {
               path="/consulation"
               element={<ProtectRoute><Consulation /></ProtectRoute>}
             />
-            <Route
-              path="/requirements"
-              element={<FilingRequirementsPage />}
-            />
+            <Route path="/requirements" element={<FilingRequirementsPage />} />
             <Route
               path="/patent"
               element={<ProtectRoute><PatentFilingProcess /></ProtectRoute>}
@@ -70,18 +65,12 @@ function App() {
               path="/copyright"
               element={<ProtectRoute><CopyrightFillingProcess /></ProtectRoute>}
             />
-            <Route
-              path="/trademarkservices"
-              element={<TrademarkServices />}
-            />
+            <Route path="/trademarkservices" element={<TrademarkServices />} />
             <Route
               path="/copyrightservices"
               element={<ProtectRoute><CopyrightServices /></ProtectRoute>}
             />
-            <Route
-              path="/industrialdesignservices"
-              element={<IndustrialDesignServices />}
-            />
+            <Route path="/industrialdesignservices" element={<IndustrialDesignServices />} />
             <Route
               path="/iplitigationpage"
               element={<ProtectRoute><IPLitigationPage /></ProtectRoute>}
@@ -91,14 +80,12 @@ function App() {
             <Route path="/contact" element={<Contact />} />
             <Route path="/about" element={<About />} />
             <Route path="/insights" element={<Insights />} />
-            {/* <Route path="/dashboard" element={<Dashboard />} /> */}
             <Route path="/login" element={<Login />} />
             <Route path="/patentGuide" element={<PatentGuidePage />} />
             <Route path="/copyrightGuide" element={<CopyrightGuidePage />} />
           </Routes>
         </main>
 
-        {/* Hide Footer on login and admin-dashboard pages */}
         {!hideFooterRoutes.includes(location.pathname) && <Footer />}
       </div>
     </ThemeProvider>
