@@ -39,7 +39,7 @@ export default function Patents() {
 
   const handleUpdateStatus = async (id, status) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/patents/${id}`, {
+      const response = await fetch(`${backend_url}/api/patents/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export default function Patents() {
   const handleDeletePatent = async (id) => {
     if (window.confirm('Are you sure you want to delete this patent application?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/patents/${id}`, {
+        const response = await fetch(`${backend_url}/api/patents/${id}`, {
           method: 'DELETE',
         });
         
@@ -125,7 +125,7 @@ export default function Patents() {
 
   const handleDownloadFile = (patent, file) => {
     if (file && file._id) {
-      window.open(`http://localhost:3001/api/patents/${patent._id}/download/${file._id}`, '_blank');
+      window.open(`${backend_url}/api/patents/${patent._id}/download/${file._id}`, '_blank');
     } else {
       alert('File not available for download');
     }
