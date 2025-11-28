@@ -12,7 +12,7 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/api': {
-        target: env.VITE_BACKEND_URL,
+        target: ' https://ipr-project.onrender.com/api',
         changeOrigin: true,
         secure: false,
       }
