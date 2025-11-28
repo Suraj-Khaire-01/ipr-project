@@ -75,15 +75,12 @@ export default function Login() {
       });
 
       const data = await res.json();
-      if (data.success) {
-        localStorage.setItem("adminToken", "admin-authenticated");
+
+      if (data.success && data.isAdminAuthenticated) {
         localStorage.setItem("adminSession", "true");
         localStorage.setItem(
           "adminInfo",
-          JSON.stringify({
-            name: "Administrator",
-            role: "admin",
-          })
+          JSON.stringify({ name: "Administrator", phone: adminData.phone })
         );
         navigate("/admin-dashboard");
       } else {
@@ -96,6 +93,7 @@ export default function Login() {
       setIsLoading(false);
     }
   };
+
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center p-4">
@@ -131,28 +129,25 @@ export default function Login() {
           {/* Tabs */}
           <div className="relative flex mb-8 p-1 bg-white/5 rounded-2xl border border-white/10">
             <div
-              className={`absolute top-1 bottom-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl transition-all duration-300 ease-out ${
-                activeTab === "client"
+              className={`absolute top-1 bottom-1 bg-gradient-to-r from-purple-600 to-blue-600 rounded-xl transition-all duration-300 ease-out ${activeTab === "client"
                   ? "left-1 right-1/2 mr-0.5"
                   : "right-1 left-1/2 ml-0.5"
-              }`}
+                }`}
             />
             <button
-              className={`relative flex-1 py-3 text-center font-semibold rounded-xl transition-all duration-300 ${
-                activeTab === "client"
+              className={`relative flex-1 py-3 text-center font-semibold rounded-xl transition-all duration-300 ${activeTab === "client"
                   ? "text-white"
                   : "text-slate-300 hover:text-white"
-              }`}
+                }`}
               onClick={() => setActiveTab("client")}
             >
               Client
             </button>
             <button
-              className={`relative flex-1 py-3 text-center font-semibold rounded-xl transition-all duration-300 ${
-                activeTab === "admin"
+              className={`relative flex-1 py-3 text-center font-semibold rounded-xl transition-all duration-300 ${activeTab === "admin"
                   ? "text-white"
                   : "text-slate-300 hover:text-white"
-              }`}
+                }`}
               onClick={() => setActiveTab("admin")}
             >
               Admin
