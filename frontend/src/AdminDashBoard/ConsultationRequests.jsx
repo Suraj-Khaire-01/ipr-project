@@ -14,7 +14,7 @@ export default function ConsultationRequests() {
   const fetchConsultationRequests = async () => {
     setIsLoadingConsultations(true);
     try {
-      const response = await fetch('http://localhost:3001/api/consultations');
+      const response = await fetch(`${backend_url}/api/consultations`);
       const result = await response.json();
       
       if (result.success) {
@@ -39,7 +39,7 @@ export default function ConsultationRequests() {
 
   const handleUpdateConsultationStatus = async (id, status) => {
     try {
-      const response = await fetch(`http://localhost:3001/api/consultations/${id}`, {
+      const response = await fetch(`${backend_url}/api/consultations/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -70,7 +70,7 @@ export default function ConsultationRequests() {
   const handleDeleteConsultation = async (id) => {
     if (window.confirm('Are you sure you want to delete this consultation request?')) {
       try {
-        const response = await fetch(`http://localhost:3001/api/consultations/${id}`, {
+        const response = await fetch(`${backend_url}/api/consultations/${id}`, {
           method: 'DELETE',
         });
         
@@ -295,7 +295,7 @@ export default function ConsultationRequests() {
                       <div key={index} className="flex items-center justify-between bg-slate-700 p-3 rounded">
                         <span className="text-white text-sm">{file.originalName}</span>
                         <a
-                          href={`http://localhost:3001/uploads/consultations/${file.fileName}`}
+                          href={`${backend_url}/uploads/consultations/${file.fileName}`}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="text-blue-400 hover:text-blue-300 text-sm"
