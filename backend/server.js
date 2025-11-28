@@ -137,49 +137,30 @@ app.post('/api/verify-admin-otp', async (req, res) => {
       .services(process.env.TWILIO_VERIFY_SID)
       .verificationChecks.create({ to: phone, code });
 
-    if (verification_check.status === 'approved') {
+    console.log("🔍 Twilio response:", verification_check);
+
+    // Accept both valid true OR approved status
+    if (
+      verification_check.status === 'approved' ||
+      verification_check.valid === true
+    ) {
       console.log(`✅ OTP verified for ${phone}`);
-      res.json({ success: true, message: 'OTP verified successfully' });
-    } else {
-      res.status(400).json({ success: false, message: 'Invalid OTP' });
+
+      // IMPORTANT: return login session success
+      return res.json({
+        success: true,
+        message: 'OTP verified successfully',
+        isAdminAuthenticated: true // 🔥 send session flag to frontend
+      });
     }
+
+    return res.status(400).json({ success: false, message: 'Invalid OTP' });
   } catch (error) {
     console.error('❌ Twilio verify-admin-otp error:', error);
-    res.status(500).json({ success: false, message: 'OTP verification failed' });
+    return res.status(500).json({ success: false, message: 'OTP verification failed' });
   }
 });
 
-
-// ✅ Email OTP (Old, still active if needed)
-app.post('/api/send-otp', async (req, res) => {
-  const { email, otp } = req.body;
-  if (!email || !otp) {
-    return res.status(400).json({ success: false, message: 'Email and OTP required' });
-  }
-
-  try {
-    const transporter = nodemailer.createTransport({
-      service: 'gmail',
-      auth: {
-        user: process.env.SMTP_EMAIL,
-        pass: process.env.SMTP_APP_PASSWORD,
-      },
-    });
-
-    await transporter.sendMail({
-      from: `"Admin Security" <${process.env.SMTP_EMAIL}>`,
-      to: email,
-      subject: 'Your Verification Code',
-      text: `Your OTP code is ${otp}. It will expire in 2 minutes.`,
-    });
-
-    console.log(`📩 OTP email sent to ${email}`);
-    res.json({ success: true, message: 'OTP sent successfully' });
-  } catch (error) {
-    console.error('❌ OTP email error:', error);
-    res.status(500).json({ success: false, message: 'Failed to send OTP email' });
-  }
-});
 
 // API Routes
 app.use('/api/copyright', copyrightRoutes);
