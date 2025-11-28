@@ -374,8 +374,8 @@ router.put('/:id', async (req, res) => {
 // @access  Private
 router.delete('/:id', async (req, res) => {
   try {
-    const { clerkUserId } = req.body;
-    
+    const { clerkUserId, isAdmin } = req.body;
+
     const copyright = await Copyright.findOne({
       $or: [
         { _id: req.params.id },
@@ -390,40 +390,49 @@ router.delete('/:id', async (req, res) => {
       });
     }
 
-    if (clerkUserId && copyright.clerkUserId !== clerkUserId) {
+    // 👇 If request is from a normal user (Clerk)
+    if (!isAdmin && clerkUserId && copyright.clerkUserId !== clerkUserId) {
       return res.status(403).json({
         success: false,
         message: 'Access denied. You can only delete your own applications.'
       });
     }
 
-    if (copyright.files && copyright.files.length > 0) {
+    // 👇 If admin delete request → skip ownership match
+    if (isAdmin) {
+      console.log("🛑 Admin override: deleting copyright without user check");
+    }
+
+    // File deletion block
+    if (copyright.files?.length > 0) {
       copyright.files.forEach(file => {
         try {
           if (fs.existsSync(file.path)) {
             fs.unlinkSync(file.path);
             console.log(`Deleted file: ${file.path}`);
           }
-        } catch (fileError) {
-          console.error(`Error deleting file ${file.path}:`, fileError);
+        } catch (error) {
+          console.error(`Failed to delete file ${file.path}:`, error);
         }
       });
     }
 
     await Copyright.findByIdAndDelete(copyright._id);
 
-    res.json({
+    return res.json({
       success: true,
       message: 'Copyright application deleted successfully'
     });
+
   } catch (error) {
-    console.error('Error deleting copyright:', error);
+    console.error("Error deleting copyright:", error);
     res.status(500).json({
       success: false,
-      message: 'Server error occurred while deleting copyright application'
+      message: "Server error occurred while deleting copyright application"
     });
   }
 });
+
 
 // Upload primary work file
 router.post('/:id/primary-file', uploadUtils.upload.single('primary'), async (req, res) => {

@@ -68,31 +68,44 @@ export default function Copyrights() {
     }
   };
 
-  const handleDeleteCopyright = async (id) => {
-    if (window.confirm('Are you sure you want to delete this copyright application?')) {
-      try {
-        const response = await fetch(`${backend_url}/api/copyright/${id}`, {
-          method: 'DELETE',
-        });
-        
-        const result = await response.json();
-        
-        if (result.success) {
-          setCopyrights(prev => prev.filter(copyright => copyright._id !== id));
-          if (selectedCopyright && selectedCopyright._id === id) {
-            setSelectedCopyright(null);
-            setShowModal(false);
-          }
-        } else {
-          console.error('Failed to delete copyright:', result.message);
-          alert('Failed to delete copyright');
+ const handleDeleteCopyright = async (id) => {
+  if (window.confirm('Are you sure you want to delete this copyright application?')) {
+    try {
+      const response = await fetch(`${backend_url}/api/copyright/${id}`, {
+        method: 'DELETE',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          isAdmin: true   // 👈 IMPORTANT for admin delete
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        // update UI on successful delete
+        setCopyrights(prev =>
+          prev.filter(copyright => copyright._id !== id)
+        );
+
+        if (selectedCopyright && selectedCopyright._id === id) {
+          setSelectedCopyright(null);
+          setShowModal(false);
         }
-      } catch (error) {
-        console.error('Error deleting copyright:', error);
-        alert('Error deleting copyright');
+
+        alert("Copyright application deleted successfully");
+      } else {
+        console.error('Failed to delete copyright:', result.message);
+        alert(result.message || "Failed to delete copyright");
       }
+    } catch (error) {
+      console.error('Error deleting copyright:', error);
+      alert('Error deleting copyright');
     }
-  };
+  }
+};
+
 
   const getStatusColor = (status) => {
     switch (status) {
